@@ -176,14 +176,21 @@ export const marketplaceRouter = createRouter({
         throw new Error("No Circle payout wallet for this seller");
       }
       const balance = await getWalletUsdcBalance(seller.circle_wallet_id);
-      if (balance <= 0) throw new Error("Nothing to withdraw");
+      // Gas on Arc is paid in USDC from the same balance, so keep a reserve.
+      const GAS_RESERVE = 0.1;
+      const amount = balance - GAS_RESERVE;
+      if (amount <= 0) {
+        throw new Error(
+          `Balance ${balance.toFixed(4)} USDC is below the ${GAS_RESERVE} USDC gas reserve`,
+        );
+      }
 
       const txId = await withdrawTo(
         seller.circle_wallet_id,
         seller.wallet_address,
-        balance.toFixed(6),
+        amount.toFixed(6),
       );
-      return { transactionId: txId, amount: balance, to: seller.wallet_address };
+      return { transactionId: txId, amount, to: seller.wallet_address };
     }),
 
   globalStats: publicQuery.query(async () => {
