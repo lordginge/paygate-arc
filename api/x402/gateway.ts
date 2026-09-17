@@ -1,186 +1,132 @@
-// x402 payment gateway for registered marketplace endpoints.
-// Flow: unpaid request -> 402 + PAYMENT-REQUIRED -> buyer retries with
-// Payment-Signature -> we settle via Circle Facilitator on Arc -> proxy the
-// call to the seller's upstream API -> log the payment in Supabase.
-
 import { Hono } from "hono";
-import type { HttpBindings } from "@hono/node-server";
-import { sbSelect, sbInsert } from "../lib/supabase";
-import {
-  ARC_NETWORK,
-  ARC_EXPLORER,
-  TREASURY_ADDRESS,
-  USDC_ADDRESS,
-  USDC_EIP712_NAME,
-  USDC_EIP712_VERSION,
-  toBaseUnits,
-  x402Configured,
-} from "./config";
-import {
-  settlePayment,
-  pollStatus,
-  type PaymentRequirements,
-} from "./facilitator";
+import { createClient } from "@supabase/supabase-js";
+import { ARC_MAINNET, USDC_ADDRESS } from "../lib/arc";
+import { settlePayment, pollStatus } from "./facilitator";
+import type { Payee } from "./proof";
+
+/**
+ * x402 gateway. Registered endpoints proxy through here; unpaid requests get a
+ * 402 with payment requirements, paid requests are settled via the Circle
+ * Facilitator and forwarded to the seller's upstream API.
+ */
 
 interface EndpointRow {
   id: string;
   slug: string;
   name: string;
-  description: string;
+  description: string | null;
   upstream_url: string;
-  price_usdc: string;
+  price_usdc: number;
+  sellers?: {
+    payout_address: string | null;
+    circle_wallet_id: string | null;
+  } | null;
 }
 
-export const x402Gateway = new Hono<{ Bindings: HttpBindings }>();
+function supabase() {
+  return createClient(
+    process.env.SUPABASE_URL ?? "",
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+  );
+}
 
-const HOP_BY_HOP = new Set([
-  "host",
-  "connection",
-  "content-length",
-  "payment-signature",
-  "x-payment",
-  "transfer-encoding",
-  "accept-encoding",
-]);
+export const x402Gateway = new Hono();
 
 x402Gateway.all("/:slug", async (c) => {
   const slug = c.req.param("slug");
+  const db = supabase();
 
-  const rows = await sbSelect<EndpointRow>(
-    "endpoints",
-    `slug=eq.${encodeURIComponent(slug)}&active=eq.true&select=id,slug,name,description,upstream_url,price_usdc`,
-  );
-  const endpoint = rows[0];
-  if (!endpoint) {
-    return c.json({ error: "Unknown or inactive endpoint", slug }, 404);
+  const { data: endpoint, error } = await db
+    .from("endpoints")
+    .select("id,slug,name,description,upstream_url,price_usdc,sellers(payout_address,circle_wallet_id)")
+    .eq("slug", slug)
+    .single<EndpointRow>();
+
+  if (error || !endpoint) {
+    return c.json({ error: "Unknown endpoint" }, 404);
   }
 
-  const resourceUrl = new URL(c.req.url);
-  const requirements: PaymentRequirements = {
-    scheme: "exact",
-    network: ARC_NETWORK,
-    amount: toBaseUnits(endpoint.price_usdc),
-    asset: USDC_ADDRESS,
-    payTo: TREASURY_ADDRESS,
-    maxTimeoutSeconds: 60,
-    extra: {
-      name: USDC_EIP712_NAME,
-      version: USDC_EIP712_VERSION,
-      assetTransferMethod: "eip3009",
-    },
+  const payee: Payee = endpoint.sellers?.payout_address
+    ? {
+        payTo: endpoint.sellers.payout_address,
+        circleWalletId: endpoint.sellers.circle_wallet_id,
+      }
+    : { payTo: process.env.TREASURY_ADDRESS ?? "" };
+
+  const resource = {
+    url: c.req.url,
+    description: endpoint.description ?? endpoint.name,
+    mimeType: "application/json",
   };
 
-  const paymentHeader =
-    c.req.header("payment-signature") ?? c.req.header("x-payment");
+  const requirements = {
+    scheme: "exact",
+    network: ARC_MAINNET.network,
+    amount: Math.round(endpoint.price_usdc * 1_000_000).toString(),
+    asset: USDC_ADDRESS,
+    payTo: payee.payTo,
+    maxTimeoutSeconds: 300,
+    extra: { name: "USDC", version: "2" },
+  };
 
-  // ---- Unpaid request: return the 402 challenge ---------------------------
-  if (!paymentHeader) {
-    const paymentRequired = {
-      x402Version: 2,
-      resource: {
-        url: resourceUrl.toString(),
-        description: endpoint.description || endpoint.name,
-        mimeType: "application/json",
-      },
-      accepts: [requirements],
-    };
-    const encoded = Buffer.from(JSON.stringify(paymentRequired)).toString(
-      "base64",
-    );
-    return new Response(JSON.stringify(paymentRequired), {
-      status: 402,
-      headers: {
-        "Content-Type": "application/json",
-        "PAYMENT-REQUIRED": encoded,
-      },
-    });
-  }
-
-  // ---- Paid request: settle then serve ------------------------------------
-  const cfg = x402Configured();
-  if (!cfg.ok) {
+  const paymentSignature = c.req.header("payment-signature");
+  if (!paymentSignature) {
     return c.json(
       {
-        error: "Settlement not configured on this deployment",
-        missing: cfg.missing,
+        x402Version: 2,
+        resource,
+        accepts: [requirements],
       },
-      503,
+      402,
+      { "payment-required": btoa(JSON.stringify({ x402Version: 2, resource, accepts: [requirements] })) },
     );
   }
 
+  // Paid call: settle via facilitator, then proxy upstream.
   let paymentPayload: unknown;
   try {
-    paymentPayload = JSON.parse(
-      Buffer.from(paymentHeader, "base64").toString("utf8"),
-    );
+    paymentPayload = JSON.parse(atob(paymentSignature));
   } catch {
     return c.json({ error: "Malformed Payment-Signature header" }, 400);
   }
 
-  const settled = await settlePayment(paymentPayload, requirements);
-
-  let txHash = settled.transaction ?? "";
-  let payer = settled.payer ?? "";
-
-  if (!settled.success && settled.pending) {
-    const final = await pollStatus(
-      settled.pending.paymentId,
-      settled.pending.retryAfterMs,
-    );
-    if (final.status !== "completed") {
-      return c.json(
-        { error: "Payment settlement did not complete", status: final.status },
-        402,
-      );
+  try {
+    const settle = await settlePayment(paymentPayload, requirements, payee);
+    const finalStatus =
+      settle.status === "completed"
+        ? "completed"
+        : await pollStatus(settle.paymentId, settle.retryAfterMs, payee);
+    if (finalStatus !== "completed") {
+      return c.json({ error: "Payment not settled", status: finalStatus }, 402);
     }
-    txHash = final.transaction ?? "";
-  } else if (!settled.success) {
-    return c.json({ error: settled.error ?? "Settlement failed" }, 402);
+
+    await db.from("payments").insert({
+      endpoint_id: endpoint.id,
+      payment_id: settle.paymentId,
+      amount_usdc: endpoint.price_usdc,
+      buyer: (paymentPayload as { payload?: { authorization?: { from?: string } } })
+        ?.payload?.authorization?.from ?? null,
+      pay_to: payee.payTo,
+    });
+  } catch (err) {
+    return c.json(
+      { error: "Settlement failed", detail: err instanceof Error ? err.message : String(err) },
+      502,
+    );
   }
 
-  // Log the settled payment.
-  await sbInsert("payments", {
-    endpoint_id: endpoint.id,
-    payer_address: payer || "unknown",
-    amount_usdc: endpoint.price_usdc,
-    tx_hash: txHash || null,
-    network: "arc",
-    status: "settled",
-  }).catch((e) => console.error("payment log failed:", e));
-
-  // Proxy the call to the seller's upstream API.
+  // Forward to the seller's upstream API.
   const upstreamUrl = new URL(endpoint.upstream_url);
-  resourceUrl.searchParams.forEach((v, k) =>
-    upstreamUrl.searchParams.append(k, v),
-  );
-
-  const fwdHeaders = new Headers();
-  c.req.raw.headers.forEach((value, key) => {
-    if (!HOP_BY_HOP.has(key.toLowerCase())) fwdHeaders.set(key, value);
-  });
-
-  const hasBody = !["GET", "HEAD"].includes(c.req.method);
+  const incoming = new URL(c.req.url);
+  upstreamUrl.search = incoming.search;
   const upstream = await fetch(upstreamUrl, {
     method: c.req.method,
-    headers: fwdHeaders,
-    body: hasBody ? await c.req.raw.arrayBuffer() : undefined,
+    headers: { "content-type": c.req.header("content-type") ?? "application/json" },
+    body: c.req.method === "GET" || c.req.method === "HEAD" ? undefined : await c.req.text(),
   });
-
-  const responseHeaders = new Headers();
-  const contentType = upstream.headers.get("content-type");
-  if (contentType) responseHeaders.set("Content-Type", contentType);
-  responseHeaders.set(
-    "X-Payment-Receipt",
-    JSON.stringify({
-      network: ARC_NETWORK,
-      amount: requirements.amount,
-      transaction: txHash,
-      explorer: txHash ? `${ARC_EXPLORER}/tx/${txHash}` : null,
-    }),
-  );
-
-  return new Response(upstream.body, {
+  const body = await upstream.arrayBuffer();
+  return new Response(body, {
     status: upstream.status,
-    headers: responseHeaders,
+    headers: { "content-type": upstream.headers.get("content-type") ?? "application/json" },
   });
 });
