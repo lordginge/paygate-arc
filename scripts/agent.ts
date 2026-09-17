@@ -62,8 +62,10 @@ interface ListedEndpoint {
 }
 
 async function balanceUsdc(): Promise<number> {
+  // Arc exposes the native USDC balance with 18 decimals over RPC, even
+  // though the USDC token contract uses 6.
   const bal = await client.getBalance({ address: account.address });
-  return Number(formatUnits(bal, 6));
+  return Number(formatUnits(bal, 18));
 }
 
 async function discover(): Promise<ListedEndpoint[]> {
