@@ -1,17 +1,31 @@
+// Circle Facilitator Service client: settle + status for x402 exact-scheme
+// USDC payments on Arc. Auth = Circle API key (Bearer) + seller proof header.
+
 import { buildSellerProof, type Payee } from "./proof";
+import { CIRCLE_API_KEY, FACILITATOR_BASE } from "./config";
 
-/**
- * Circle Facilitator Service client. All calls are authenticated with the
- * server-side CIRCLE_API_KEY plus a per-request Facilitator-Seller-Proof
- * signed by the payee's key (Circle wallet or legacy treasury key).
- */
-
-const FACILITATOR_BASE = "https://api.circle.com/v1/facilitator/x402";
+export interface PaymentRequirements {
+  scheme: "exact";
+  network: string;
+  amount: string;
+  asset: string;
+  payTo: string;
+  maxTimeoutSeconds: number;
+  extra: { name: string; version: string; assetTransferMethod?: string };
+}
 
 export interface SettleResult {
-  paymentId: string;
-  status: string;
-  retryAfterMs?: number;
+  success: boolean;
+  payer?: string;
+  transaction?: string;
+  network?: string;
+  amount?: string;
+  pending?: {
+    paymentId: string;
+    statusUrl: string;
+    retryAfterMs: number;
+  };
+  error?: string;
 }
 
 async function facilitatorFetch(
@@ -20,74 +34,106 @@ async function facilitatorFetch(
   payee: Payee,
   body?: unknown,
 ): Promise<Response> {
-  const method = body === undefined ? "GET" : "POST";
-  const proof = await buildSellerProof(purpose, method, body, payee);
+  const bodyStr = body ? JSON.stringify(body) : "";
+  const proof = await buildSellerProof(purpose, body ? "POST" : "GET", bodyStr, payee);
   return fetch(`${FACILITATOR_BASE}${path}`, {
-    method,
+    method: body ? "POST" : "GET",
     headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${process.env.CIRCLE_API_KEY ?? ""}`,
-      "facilitator-seller-proof": proof,
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${CIRCLE_API_KEY}`,
+      "Facilitator-Seller-Proof": proof,
     },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body ? bodyStr : undefined,
   });
+}
+
+function makePaymentId(): string {
+  // Idempotency id: 16-128 chars from [A-Za-z0-9_-]
+  return `pay_${crypto.randomUUID().replace(/-/g, "")}`;
 }
 
 export async function settlePayment(
   paymentPayload: unknown,
-  paymentRequirements: unknown,
+  paymentRequirements: PaymentRequirements,
   payee: Payee,
 ): Promise<SettleResult> {
-  const res = await facilitatorFetch(
-    "/settle",
-    "settle",
-    payee,
-    { paymentPayload, paymentRequirements },
-  );
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Facilitator settle failed: ${res.status} ${text}`);
-  }
-  const data = (await res.json()) as {
-    paymentId?: string;
-    status?: string;
-    retryAfter?: number;
+  const body = {
+    x402Version: 2,
+    paymentPayload: {
+      ...(paymentPayload as Record<string, unknown>),
+      extensions: {
+        "payment-identifier": {
+          info: { required: true, id: makePaymentId() },
+        },
+      },
+    },
+    paymentRequirements,
   };
-  if (!data.paymentId || !data.status) {
-    throw new Error("Facilitator settle returned malformed response");
+
+  const res = await facilitatorFetch("/settle", "settle", payee, body);
+  const data = (await res.json()) as Record<string, unknown>;
+
+  if (res.ok && data.success === true) {
+    return {
+      success: true,
+      payer: data.payer as string,
+      transaction: data.transaction as string,
+      network: data.network as string,
+      amount: data.amount as string,
+    };
   }
+
+  // Pending shape: poll /status until terminal.
+  const ext = data.extensions as
+    | Record<string, { status?: string; paymentId?: string; statusUrl?: string; retryAfterMs?: number }>
+    | undefined;
+  const pending = ext?.["settlement-status"];
+  if (pending?.status === "pending" && pending.paymentId) {
+    return {
+      success: false,
+      payer: data.payer as string,
+      pending: {
+        paymentId: pending.paymentId,
+        statusUrl:
+          pending.statusUrl ??
+          `${FACILITATOR_BASE}/status/${pending.paymentId}`,
+        retryAfterMs: pending.retryAfterMs ?? 1000,
+      },
+    };
+  }
+
   return {
-    paymentId: data.paymentId,
-    status: data.status,
-    retryAfterMs: data.retryAfter,
+    success: false,
+    error:
+      (data.error as string) ??
+      (data.message as string) ??
+      `settle failed with HTTP ${res.status}: ${JSON.stringify(data)}`,
   };
 }
 
 export async function pollStatus(
   paymentId: string,
-  retryAfterMs: number | undefined,
+  retryAfterMs: number,
   payee: Payee,
   maxAttempts = 20,
-): Promise<string> {
-  let wait = Math.max(retryAfterMs ?? 1000, 500);
+): Promise<{ status: string; transaction?: string; reason?: string | null }> {
+  let delay = retryAfterMs;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    await new Promise((resolve) => setTimeout(resolve, wait));
-    const res = await facilitatorFetch(
-      `/status?paymentId=${encodeURIComponent(paymentId)}`,
-      "status",
-      payee,
-    );
-    if (!res.ok) {
-      throw new Error(`Facilitator status failed: ${res.status}`);
-    }
+    await new Promise((r) => setTimeout(r, delay));
+    const res = await facilitatorFetch(`/status/${paymentId}`, "status", payee);
     const data = (await res.json()) as {
       status?: string;
-      retryAfter?: number;
+      transaction?: string;
+      reason?: string | null;
     };
     if (data.status === "completed" || data.status === "failed") {
-      return data.status;
+      return {
+        status: data.status,
+        transaction: data.transaction,
+        reason: data.reason,
+      };
     }
-    wait = Math.max(data.retryAfter ?? wait, 500);
+    delay = Math.min(delay * 1.5, 5000);
   }
-  throw new Error("Facilitator status polling timed out");
+  return { status: "timeout" };
 }
