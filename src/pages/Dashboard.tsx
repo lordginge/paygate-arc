@@ -56,10 +56,10 @@ export default function Dashboard() {
             value={wallet}
             onChange={(e) => setWallet(e.target.value)}
             placeholder="0x..."
-            className="bg-black/40 border-white/15 text-white"
+            className="bg-black/40 border-white/15 text-white rounded-none"
           />
           <Button
-            className="bg-[#2775CA] hover:bg-[#1f63ad] text-white"
+            className="bg-[#3B6DFF] hover:bg-[#2b57d9] rounded-none text-white"
             onClick={() => setSubmitted(wallet)}
           >
             Load
@@ -69,13 +69,13 @@ export default function Dashboard() {
         {stats.data && (
           <div className="mt-8 space-y-6">
             {stats.data.payoutAddress && (
-              <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
+              <Card className="bg-black/70 border-white/10 backdrop-blur-md rounded-none">
                 <CardContent className="pt-4 flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <div className="text-xs text-white/50">
                       Payout wallet (Circle, settles directly per call)
                     </div>
-                    <code className="text-sm text-[#5AB0FF]">
+                    <code className="text-sm text-[#3B6DFF]">
                       {stats.data.payoutAddress}
                     </code>
                     <div className="mt-1 text-xs text-white/35">
@@ -86,7 +86,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <Button
-                    className="bg-[#2775CA] hover:bg-[#1f63ad] text-white"
+                    className="bg-[#3B6DFF] hover:bg-[#2b57d9] rounded-none text-white"
                     disabled={
                       withdraw.isPending ||
                       !stats.data.payoutBalance ||
@@ -111,7 +111,7 @@ export default function Dashboard() {
               </Card>
             )}
             <div className="grid grid-cols-3 gap-4">
-              <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
+              <Card className="bg-black/70 border-white/10 backdrop-blur-md rounded-none">
                 <CardContent className="pt-4">
                   <div className="text-2xl font-semibold text-white">
                     {stats.data.endpoints.length}
@@ -119,7 +119,7 @@ export default function Dashboard() {
                   <div className="text-xs text-white/50">Endpoints</div>
                 </CardContent>
               </Card>
-              <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
+              <Card className="bg-black/70 border-white/10 backdrop-blur-md rounded-none">
                 <CardContent className="pt-4">
                   <div className="text-2xl font-semibold text-white">
                     {stats.data.payments.length}
@@ -127,7 +127,7 @@ export default function Dashboard() {
                   <div className="text-xs text-white/50">Payments</div>
                 </CardContent>
               </Card>
-              <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
+              <Card className="bg-black/70 border-white/10 backdrop-blur-md rounded-none">
                 <CardContent className="pt-4">
                   <div className="text-2xl font-semibold text-emerald-400">
                     ${stats.data.totalEarned.toFixed(4)}
@@ -137,7 +137,7 @@ export default function Dashboard() {
               </Card>
             </div>
 
-            <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
+            <Card className="bg-black/70 border-white/10 backdrop-blur-md rounded-none">
               <CardHeader>
                 <CardTitle className="text-white text-base">Your endpoints</CardTitle>
               </CardHeader>
@@ -155,7 +155,7 @@ export default function Dashboard() {
                       <TableRow key={e.id} className="border-white/5">
                         <TableCell className="text-white">{e.name}</TableCell>
                         <TableCell>
-                          <code className="text-xs text-[#5AB0FF]">
+                          <code className="text-xs text-[#3B6DFF]">
                             /api/x402/{e.slug}
                           </code>
                         </TableCell>
@@ -179,7 +179,7 @@ export default function Dashboard() {
         <h2 className="mt-14 mb-4 text-xl font-semibold text-white">
           Live payment feed
         </h2>
-        <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
+        <Card className="bg-black/70 border-white/10 backdrop-blur-md rounded-none">
           <CardContent className="pt-4">
             {payments.length === 0 && (
               <p className="text-white/35 py-6 text-center">
@@ -215,7 +215,7 @@ export default function Dashboard() {
                             href={`https://explorer.arc.io/tx/${p.tx_hash}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-[#5AB0FF] hover:underline inline-flex items-center gap-1 text-xs"
+                            className="text-[#3B6DFF] hover:underline inline-flex items-center gap-1 text-xs"
                           >
                             {p.tx_hash.slice(0, 10)}...
                             <ExternalLink size={12} />

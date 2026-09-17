@@ -55,12 +55,12 @@ export default function Sell() {
         </p>
 
         {msg && (
-          <div className="mt-4 rounded-lg border border-[#2775CA]/30 bg-[#2775CA]/10 px-4 py-3 text-sm text-[#5AB0FF]">
+          <div className="mt-4 rounded-lg border border-[#3B6DFF]/30 bg-[#3B6DFF]/10 px-4 py-3 text-sm text-[#3B6DFF]">
             {msg}
           </div>
         )}
 
-        <Card className="mt-8 bg-[#050617]/70 border-white/10 backdrop-blur-md">
+        <Card className="mt-8 bg-black/70 border-white/10 backdrop-blur-md rounded-none">
           <CardHeader>
             <CardTitle className="text-white">1. Register as a seller</CardTitle>
           </CardHeader>
@@ -71,7 +71,7 @@ export default function Sell() {
                 value={wallet}
                 onChange={(e) => setWallet(e.target.value)}
                 placeholder="0x..."
-                className="mt-1 bg-black/40 border-white/15 text-white"
+                className="mt-1 bg-black/40 border-white/15 text-white rounded-none"
               />
               <p className="mt-1 text-xs text-white/35">
                 Public address only. Never paste a private key here.
@@ -83,11 +83,11 @@ export default function Sell() {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Acme Data Co"
-                className="mt-1 bg-black/40 border-white/15 text-white"
+                className="mt-1 bg-black/40 border-white/15 text-white rounded-none"
               />
             </div>
             <Button
-              className="bg-[#2775CA] hover:bg-[#1f63ad] text-white"
+              className="bg-[#3B6DFF] hover:bg-[#2b57d9] rounded-none text-white"
               disabled={registerSeller.isPending || !wallet || !displayName}
               onClick={() =>
                 registerSeller.mutate({ walletAddress: wallet, displayName })
@@ -98,7 +98,7 @@ export default function Sell() {
           </CardContent>
         </Card>
 
-        <Card className="mt-6 bg-[#050617]/70 border-white/10 backdrop-blur-md">
+        <Card className="mt-6 bg-black/70 border-white/10 backdrop-blur-md rounded-none">
           <CardHeader>
             <CardTitle className="text-white">2. List an endpoint</CardTitle>
           </CardHeader>
@@ -110,7 +110,7 @@ export default function Sell() {
                   value={slug}
                   onChange={(e) => setSlug(e.target.value.toLowerCase())}
                   placeholder="weather-now"
-                  className="mt-1 bg-black/40 border-white/15 text-white"
+                  className="mt-1 bg-black/40 border-white/15 text-white rounded-none"
                 />
               </div>
               <div>
@@ -121,7 +121,7 @@ export default function Sell() {
                   type="number"
                   step="0.0001"
                   min="0.000001"
-                  className="mt-1 bg-black/40 border-white/15 text-white"
+                  className="mt-1 bg-black/40 border-white/15 text-white rounded-none"
                 />
               </div>
             </div>
@@ -131,7 +131,7 @@ export default function Sell() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Live weather lookup"
-                className="mt-1 bg-black/40 border-white/15 text-white"
+                className="mt-1 bg-black/40 border-white/15 text-white rounded-none"
               />
             </div>
             <div>
@@ -140,7 +140,7 @@ export default function Sell() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="What does this endpoint return?"
-                className="mt-1 bg-black/40 border-white/15 text-white"
+                className="mt-1 bg-black/40 border-white/15 text-white rounded-none"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -149,7 +149,7 @@ export default function Sell() {
                 <Input
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="mt-1 bg-black/40 border-white/15 text-white"
+                  className="mt-1 bg-black/40 border-white/15 text-white rounded-none"
                 />
               </div>
               <div>
@@ -158,7 +158,7 @@ export default function Sell() {
                   value={upstreamUrl}
                   onChange={(e) => setUpstreamUrl(e.target.value)}
                   placeholder="https://api.example.com/data"
-                  className="mt-1 bg-black/40 border-white/15 text-white"
+                  className="mt-1 bg-black/40 border-white/15 text-white rounded-none"
                 />
               </div>
             </div>
@@ -168,7 +168,7 @@ export default function Sell() {
               unpaid callers never reach it.
             </p>
             <Button
-              className="bg-[#2775CA] hover:bg-[#1f63ad] text-white"
+              className="bg-[#3B6DFF] hover:bg-[#2b57d9] rounded-none text-white"
               disabled={
                 createEndpoint.isPending ||
                 !sellerReady ||

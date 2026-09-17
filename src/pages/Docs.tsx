@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function Code({ children }: { children: string }) {
   return (
-    <pre className="mt-2 overflow-x-auto rounded-lg bg-black/50 border border-white/10 p-4 text-xs leading-relaxed text-emerald-200">
+    <pre className="mt-2 overflow-x-auto bg-black/50 border border-white/10 p-4 text-xs leading-relaxed text-emerald-200">
       {children}
     </pre>
   );
@@ -25,7 +25,7 @@ export default function Docs() {
           </p>
         </div>
 
-        <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
+        <Card className="bg-black/70 border-white/10 backdrop-blur-md rounded-none">
           <CardHeader>
             <CardTitle className="text-white text-base">For buyers and agents</CardTitle>
           </CardHeader>
@@ -66,7 +66,7 @@ export default function Docs() {
           </CardContent>
         </Card>
 
-        <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
+        <Card className="bg-black/70 border-white/10 backdrop-blur-md rounded-none">
           <CardHeader>
             <CardTitle className="text-white text-base">For sellers</CardTitle>
           </CardHeader>
@@ -96,7 +96,7 @@ export default function Docs() {
           </CardContent>
         </Card>
 
-        <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
+        <Card className="bg-black/70 border-white/10 backdrop-blur-md rounded-none">
           <CardHeader>
             <CardTitle className="text-white text-base">Try the demo buyer</CardTitle>
           </CardHeader>
