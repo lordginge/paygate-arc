@@ -4,26 +4,26 @@
 
 @layer base {
   :root {
-    --background: 232 58% 5%;
-    --foreground: 0 0% 98%;
-    --card: 232 45% 7%;
-    --card-foreground: 0 0% 98%;
-    --popover: 232 45% 7%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 207 68% 47%;
+    --background: 0 0% 2%;
+    --foreground: 0 0% 96%;
+    --card: 0 0% 4%;
+    --card-foreground: 0 0% 96%;
+    --popover: 0 0% 4%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 222 100% 62%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 232 20% 14%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 232 20% 14%;
-    --muted-foreground: 230 10% 60%;
-    --accent: 232 20% 14%;
-    --accent-foreground: 0 0% 98%;
+    --secondary: 0 0% 8%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 0 0% 8%;
+    --muted-foreground: 0 0% 55%;
+    --accent: 0 0% 8%;
+    --accent-foreground: 0 0% 96%;
     --destructive: 0 62.8% 45%;
     --destructive-foreground: 0 0% 98%;
-    --border: 230 20% 16%;
-    --input: 230 20% 18%;
-    --ring: 207 68% 47%;
-    --radius: 0.625rem;
+    --border: 0 0% 14%;
+    --input: 0 0% 16%;
+    --ring: 222 100% 62%;
+    --radius: 0rem;
   }
 
   * {
@@ -49,11 +49,66 @@
   }
 
   ::selection {
-    background: rgba(39, 117, 202, 0.4);
+    background: rgba(59, 109, 255, 0.45);
   }
 }
 
 @layer components {
+  /* Monospace micro-label: the backbone of the visual system */
+  .mono-label {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+
+  .mono-chip {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 6px 12px;
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  /* Square buttons */
+  .btn-block {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 14px 28px;
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    background: #fff;
+    color: #000;
+    transition:
+      background 0.15s linear,
+      color 0.15s linear;
+  }
+  .btn-block:hover {
+    background: #3b6dff;
+    border-color: #3b6dff;
+    color: #fff;
+  }
+  .btn-block-ghost {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 14px 28px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.85);
+    transition:
+      border-color 0.15s linear,
+      color 0.15s linear;
+  }
+  .btn-block-ghost:hover {
+    border-color: rgba(255, 255, 255, 0.9);
+    color: #fff;
+  }
+
   /* Signature link underline (0 -> 100% width) */
   .link-line {
     position: relative;
@@ -84,10 +139,10 @@
   }
   .edge-fade-top {
     top: 0;
-    background: linear-gradient(to bottom, rgba(5, 6, 23, 0.9), transparent);
+    background: linear-gradient(to bottom, rgba(5, 5, 5, 0.92), transparent);
   }
   .edge-fade-bottom {
     bottom: 0;
-    background: linear-gradient(to top, rgba(5, 6, 23, 0.9), transparent);
+    background: linear-gradient(to top, rgba(5, 5, 5, 0.92), transparent);
   }
 }

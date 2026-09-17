@@ -9,32 +9,32 @@ const nav = [
 
 export function SiteHeader() {
   return (
-    <header className="fixed top-0 inset-x-0 z-50">
-      <div className="mx-auto max-w-6xl px-6 h-20 flex items-center justify-between">
-        <Link
-          to="/"
-          className="text-white/90 font-medium tracking-tight text-lg flex items-baseline gap-2"
-        >
-          PayGate
-          <span className="text-[11px] uppercase tracking-[0.18em] text-[#5AB0FF]">
-            x402 · Arc
+    <header className="fixed top-0 inset-x-0 z-50 border-b border-white/10 bg-black/70 backdrop-blur-md">
+      <div className="mx-auto max-w-6xl px-6 h-16 flex items-center justify-between">
+        <Link to="/" className="flex items-baseline gap-3">
+          <span className="text-white font-semibold tracking-tight text-base">
+            PayGate
           </span>
+          <span className="mono-label text-[#3B6DFF]">x402 / Arc</span>
         </Link>
-        <nav className="flex items-center gap-6">
+        <nav className="flex items-center gap-7">
           {nav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === "/"}
               className={({ isActive }) =>
-                `link-line text-sm transition-colors ${
-                  isActive ? "text-white" : "text-white/50 hover:text-white/90"
+                `mono-label transition-colors ${
+                  isActive ? "text-white" : "text-white/45 hover:text-white"
                 }`
               }
             >
               {item.label}
             </NavLink>
           ))}
+          <Link to="/sell" className="btn-block !py-2 !px-4 hidden sm:inline-block">
+            Start selling
+          </Link>
         </nav>
       </div>
     </header>

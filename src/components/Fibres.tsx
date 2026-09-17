@@ -1,7 +1,7 @@
 // Living fibre-field background. WebGPU via three.js TSL with automatic
 // WebGL2 fallback (WebGPURenderer selects the backend). Fullscreen QuadMesh
 // runs the shader; a uniform clock drives the drift so motion can pause.
-// Palette: deep navy #050617, USDC blue #2775CA, ice highlight.
+// Palette: pure black field, electric blue #3B6DFF filaments, ice highlight.
 
 import { useEffect, useRef } from "react";
 import * as THREE from "three/webgpu";
@@ -90,9 +90,9 @@ export function Fibres({
         .mul(0.5)
         .add(0.5);
 
-      const navy = vec3(0.02, 0.024, 0.09);
-      const usdc = vec3(0.153, 0.459, 0.792);
-      const ice = vec3(0.56, 0.76, 1.0);
+      const navy = vec3(0.008, 0.008, 0.012);
+      const usdc = vec3(0.14, 0.32, 1.0);
+      const ice = vec3(0.55, 0.72, 1.0);
       const fibreCol = mix(usdc, ice, thread.mul(0.55));
 
       // Legibility vignette: fibres breathe at the edges, near-calm centre
@@ -184,7 +184,7 @@ export function Fibres({
       ref={mountRef}
       aria-hidden
       className="fixed inset-0 -z-10 [&>canvas]:h-full [&>canvas]:w-full"
-      style={{ background: "#050617" }}
+      style={{ background: "#050505" }}
     />
   );
 }
