@@ -1,4 +1,5 @@
 import { SiteHeader } from "@/components/SiteHeader";
+import { Fibres } from "@/components/Fibres";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function Code({ children }: { children: string }) {
@@ -11,23 +12,24 @@ function Code({ children }: { children: string }) {
 
 export default function Docs() {
   return (
-    <div className="min-h-screen bg-[#0a0f1e] text-slate-200">
+    <div className="min-h-screen text-white/90">
+      <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
       <SiteHeader />
       <div className="mx-auto max-w-3xl px-4 py-12 space-y-8">
         <div>
           <h1 className="text-3xl font-bold text-white">How PayGate works</h1>
-          <p className="mt-2 text-slate-400">
+          <p className="mt-2 text-white/50">
             PayGate is a pay-per-call API marketplace on Arc mainnet. Every
             endpoint speaks x402 v2 with the exact scheme, settled by Circle's
             Facilitator Service in native USDC.
           </p>
         </div>
 
-        <Card className="bg-white/5 border-white/10">
+        <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
           <CardHeader>
             <CardTitle className="text-white text-base">For buyers and agents</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-slate-300 space-y-3">
+          <CardContent className="text-sm text-white/80 space-y-3">
             <p>
               1. Call any endpoint URL. Unpaid calls return HTTP 402 with a
               base64 <code>PAYMENT-REQUIRED</code> header describing price,
@@ -49,11 +51,11 @@ export default function Docs() {
             <Code>{`// 402 challenge (decoded)
 {
   "x402Version": 2,
-  "resource": { "url": ".../api/x402/crypto-prices", ... },
+  "resource": { "url": ".../api/x402/weather-now", ... },
   "accepts": [{
     "scheme": "exact",
     "network": "eip155:5042",
-    "amount": "1000",             // 0.001 USDC, 6 decimals
+    "amount": "10000",            // 0.01 USDC, 6 decimals
     "asset": "0x3600...0000",     // USDC on Arc
     "payTo": "0xTreasury...",
     "maxTimeoutSeconds": 60,
@@ -64,11 +66,11 @@ export default function Docs() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/5 border-white/10">
+        <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
           <CardHeader>
             <CardTitle className="text-white text-base">For sellers</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-slate-300 space-y-3">
+          <CardContent className="text-sm text-white/80 space-y-3">
             <p>
               Register on the Sell page with your Arc address, list an
               endpoint with an upstream URL and a USDC price, and share the
@@ -80,7 +82,7 @@ export default function Docs() {
               no relayer or gas wallet to operate. Payments are logged per
               endpoint and visible on your dashboard with Arc explorer links.
             </p>
-            <p className="text-slate-500 text-xs">
+            <p className="text-white/35 text-xs">
               v1 note: payments settle to the platform treasury wallet and
               earnings are tracked per endpoint in the ledger. Direct
               per-seller settlement addresses are on the v2 roadmap.
@@ -88,18 +90,18 @@ export default function Docs() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white/5 border-white/10">
+        <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
           <CardHeader>
             <CardTitle className="text-white text-base">Try the demo buyer</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-slate-300">
+          <CardContent className="text-sm text-white/80">
             <p>
               The repo ships a buyer script that performs the full 402 flow
               against any listed endpoint using a funded Arc wallet:
             </p>
-            <Code>{`BUYER_PRIVATE_KEY=0x... \\
-PAYGATE_URL=https://<deployment> \\
-SLUG=crypto-prices \\
+            <Code>{`BUYER_PRIVATE_KEY=0x... \
+PAYGATE_URL=https://<deployment> \
+SLUG=weather-now \
 npx tsx scripts/demo-buyer.ts`}</Code>
           </CardContent>
         </Card>

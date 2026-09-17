@@ -1,4 +1,5 @@
 import { SiteHeader } from "@/components/SiteHeader";
+import { Fibres } from "@/components/Fibres";
 import { trpc } from "@/providers/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -36,11 +37,12 @@ export default function Dashboard() {
   const payments = (feed.data ?? []) as unknown as PaymentRow[];
 
   return (
-    <div className="min-h-screen bg-[#0a0f1e] text-slate-200">
+    <div className="min-h-screen text-white/90">
+      <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
       <SiteHeader />
       <div className="mx-auto max-w-6xl px-4 py-12">
         <h1 className="text-3xl font-bold text-white">Seller dashboard</h1>
-        <p className="mt-2 text-slate-400">
+        <p className="mt-2 text-white/50">
           Enter your Arc wallet address to see endpoints, earnings and payment
           history.
         </p>
@@ -53,7 +55,7 @@ export default function Dashboard() {
             className="bg-black/40 border-white/15 text-white"
           />
           <Button
-            className="bg-blue-500 hover:bg-blue-600 text-white"
+            className="bg-[#2775CA] hover:bg-[#1f63ad] text-white"
             onClick={() => setSubmitted(wallet)}
           >
             Load
@@ -63,33 +65,33 @@ export default function Dashboard() {
         {stats.data && (
           <div className="mt-8 space-y-6">
             <div className="grid grid-cols-3 gap-4">
-              <Card className="bg-white/5 border-white/10">
+              <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
                 <CardContent className="pt-4">
                   <div className="text-2xl font-semibold text-white">
                     {stats.data.endpoints.length}
                   </div>
-                  <div className="text-xs text-slate-400">Endpoints</div>
+                  <div className="text-xs text-white/50">Endpoints</div>
                 </CardContent>
               </Card>
-              <Card className="bg-white/5 border-white/10">
+              <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
                 <CardContent className="pt-4">
                   <div className="text-2xl font-semibold text-white">
                     {stats.data.payments.length}
                   </div>
-                  <div className="text-xs text-slate-400">Payments</div>
+                  <div className="text-xs text-white/50">Payments</div>
                 </CardContent>
               </Card>
-              <Card className="bg-white/5 border-white/10">
+              <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
                 <CardContent className="pt-4">
                   <div className="text-2xl font-semibold text-emerald-400">
                     ${stats.data.totalEarned.toFixed(4)}
                   </div>
-                  <div className="text-xs text-slate-400">Earned (USDC on Arc)</div>
+                  <div className="text-xs text-white/50">Earned (USDC on Arc)</div>
                 </CardContent>
               </Card>
             </div>
 
-            <Card className="bg-white/5 border-white/10">
+            <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
               <CardHeader>
                 <CardTitle className="text-white text-base">Your endpoints</CardTitle>
               </CardHeader>
@@ -97,9 +99,9 @@ export default function Dashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-white/10">
-                      <TableHead className="text-slate-400">Name</TableHead>
-                      <TableHead className="text-slate-400">URL</TableHead>
-                      <TableHead className="text-slate-400 text-right">Price</TableHead>
+                      <TableHead className="text-white/50">Name</TableHead>
+                      <TableHead className="text-white/50">URL</TableHead>
+                      <TableHead className="text-white/50 text-right">Price</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -107,11 +109,11 @@ export default function Dashboard() {
                       <TableRow key={e.id} className="border-white/5">
                         <TableCell className="text-white">{e.name}</TableCell>
                         <TableCell>
-                          <code className="text-xs text-emerald-300">
+                          <code className="text-xs text-[#5AB0FF]">
                             /api/x402/{e.slug}
                           </code>
                         </TableCell>
-                        <TableCell className="text-right text-slate-300">
+                        <TableCell className="text-right text-white/80">
                           ${Number(e.price_usdc).toFixed(4)}
                         </TableCell>
                       </TableRow>
@@ -123,7 +125,7 @@ export default function Dashboard() {
           </div>
         )}
         {submitted && stats.data === null && (
-          <p className="mt-6 text-slate-400">
+          <p className="mt-6 text-white/50">
             No seller found for that address. Register on the Sell page first.
           </p>
         )}
@@ -131,10 +133,10 @@ export default function Dashboard() {
         <h2 className="mt-14 mb-4 text-xl font-semibold text-white">
           Live payment feed
         </h2>
-        <Card className="bg-white/5 border-white/10">
+        <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
           <CardContent className="pt-4">
             {payments.length === 0 && (
-              <p className="text-slate-500 py-6 text-center">
+              <p className="text-white/35 py-6 text-center">
                 No payments settled yet.
               </p>
             )}
@@ -142,11 +144,11 @@ export default function Dashboard() {
               <Table>
                 <TableHeader>
                   <TableRow className="border-white/10">
-                    <TableHead className="text-slate-400">Endpoint</TableHead>
-                    <TableHead className="text-slate-400">Payer</TableHead>
-                    <TableHead className="text-slate-400 text-right">Amount</TableHead>
-                    <TableHead className="text-slate-400">Tx</TableHead>
-                    <TableHead className="text-slate-400">Time</TableHead>
+                    <TableHead className="text-white/50">Endpoint</TableHead>
+                    <TableHead className="text-white/50">Payer</TableHead>
+                    <TableHead className="text-white/50 text-right">Amount</TableHead>
+                    <TableHead className="text-white/50">Tx</TableHead>
+                    <TableHead className="text-white/50">Time</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -155,7 +157,7 @@ export default function Dashboard() {
                       <TableCell className="text-white">
                         {p.endpoints?.name ?? "?"}
                       </TableCell>
-                      <TableCell className="text-slate-400 text-xs">
+                      <TableCell className="text-white/50 text-xs">
                         {p.payer_address.slice(0, 10)}...
                       </TableCell>
                       <TableCell className="text-right text-emerald-400">
@@ -167,16 +169,16 @@ export default function Dashboard() {
                             href={`https://explorer.arc.io/tx/${p.tx_hash}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-blue-400 hover:underline inline-flex items-center gap-1 text-xs"
+                            className="text-[#5AB0FF] hover:underline inline-flex items-center gap-1 text-xs"
                           >
                             {p.tx_hash.slice(0, 10)}...
                             <ExternalLink size={12} />
                           </a>
                         ) : (
-                          <span className="text-slate-500 text-xs">pending</span>
+                          <span className="text-white/35 text-xs">pending</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-slate-500 text-xs">
+                      <TableCell className="text-white/35 text-xs">
                         {new Date(p.created_at).toLocaleString("en-GB")}
                       </TableCell>
                     </TableRow>

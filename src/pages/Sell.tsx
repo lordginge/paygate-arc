@@ -1,4 +1,5 @@
 import { SiteHeader } from "@/components/SiteHeader";
+import { Fibres } from "@/components/Fibres";
 import { trpc } from "@/providers/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,40 +42,41 @@ export default function Sell() {
   });
 
   return (
-    <div className="min-h-screen bg-[#0a0f1e] text-slate-200">
+    <div className="min-h-screen text-white/90">
+      <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
       <SiteHeader />
       <div className="mx-auto max-w-2xl px-4 py-12">
         <h1 className="text-3xl font-bold text-white">Sell on PayGate</h1>
-        <p className="mt-2 text-slate-400">
+        <p className="mt-2 text-white/50">
           Two steps: register your payout identity, then wrap an API with an
           x402 paywall priced in USDC on Arc.
         </p>
 
         {msg && (
-          <div className="mt-4 rounded-lg border border-blue-400/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-200">
+          <div className="mt-4 rounded-lg border border-[#2775CA]/30 bg-[#2775CA]/10 px-4 py-3 text-sm text-[#5AB0FF]">
             {msg}
           </div>
         )}
 
-        <Card className="mt-8 bg-white/5 border-white/10">
+        <Card className="mt-8 bg-[#050617]/70 border-white/10 backdrop-blur-md">
           <CardHeader>
             <CardTitle className="text-white">1. Register as a seller</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label className="text-slate-300">Arc wallet address</Label>
+              <Label className="text-white/80">Arc wallet address</Label>
               <Input
                 value={wallet}
                 onChange={(e) => setWallet(e.target.value)}
                 placeholder="0x..."
                 className="mt-1 bg-black/40 border-white/15 text-white"
               />
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-white/35">
                 Public address only. Never paste a private key here.
               </p>
             </div>
             <div>
-              <Label className="text-slate-300">Display name</Label>
+              <Label className="text-white/80">Display name</Label>
               <Input
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
@@ -83,7 +85,7 @@ export default function Sell() {
               />
             </div>
             <Button
-              className="bg-blue-500 hover:bg-blue-600 text-white"
+              className="bg-[#2775CA] hover:bg-[#1f63ad] text-white"
               disabled={registerSeller.isPending || !wallet || !displayName}
               onClick={() =>
                 registerSeller.mutate({ walletAddress: wallet, displayName })
@@ -94,14 +96,14 @@ export default function Sell() {
           </CardContent>
         </Card>
 
-        <Card className="mt-6 bg-white/5 border-white/10">
+        <Card className="mt-6 bg-[#050617]/70 border-white/10 backdrop-blur-md">
           <CardHeader>
             <CardTitle className="text-white">2. List an endpoint</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-slate-300">Slug</Label>
+                <Label className="text-white/80">Slug</Label>
                 <Input
                   value={slug}
                   onChange={(e) => setSlug(e.target.value.toLowerCase())}
@@ -110,7 +112,7 @@ export default function Sell() {
                 />
               </div>
               <div>
-                <Label className="text-slate-300">Price per call (USDC)</Label>
+                <Label className="text-white/80">Price per call (USDC)</Label>
                 <Input
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
@@ -122,7 +124,7 @@ export default function Sell() {
               </div>
             </div>
             <div>
-              <Label className="text-slate-300">Name</Label>
+              <Label className="text-white/80">Name</Label>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -131,7 +133,7 @@ export default function Sell() {
               />
             </div>
             <div>
-              <Label className="text-slate-300">Description</Label>
+              <Label className="text-white/80">Description</Label>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -141,7 +143,7 @@ export default function Sell() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-slate-300">Category</Label>
+                <Label className="text-white/80">Category</Label>
                 <Input
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
@@ -149,7 +151,7 @@ export default function Sell() {
                 />
               </div>
               <div>
-                <Label className="text-slate-300">Upstream API URL</Label>
+                <Label className="text-white/80">Upstream API URL</Label>
                 <Input
                   value={upstreamUrl}
                   onChange={(e) => setUpstreamUrl(e.target.value)}
@@ -158,13 +160,13 @@ export default function Sell() {
                 />
               </div>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-white/35">
               PayGate proxies paid calls to your upstream URL. Keep any secret
               keys in the upstream URL or in headers your upstream requires;
               unpaid callers never reach it.
             </p>
             <Button
-              className="bg-blue-500 hover:bg-blue-600 text-white"
+              className="bg-[#2775CA] hover:bg-[#1f63ad] text-white"
               disabled={
                 createEndpoint.isPending ||
                 !sellerReady ||
