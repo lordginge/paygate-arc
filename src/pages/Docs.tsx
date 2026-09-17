@@ -82,10 +82,16 @@ export default function Docs() {
               no relayer or gas wallet to operate. Payments are logged per
               endpoint and visible on your dashboard with Arc explorer links.
             </p>
+            <p>
+              Each seller gets a dedicated Circle developer-controlled wallet
+              on Arc at registration. Endpoints settle directly to that
+              wallet, and the seller proof is signed through Circle's Sign
+              API, so no private key ever touches PayGate's servers. Withdraw
+              to your own address any time from the dashboard.
+            </p>
             <p className="text-white/35 text-xs">
-              v1 note: payments settle to the platform treasury wallet and
-              earnings are tracked per endpoint in the ledger. Direct
-              per-seller settlement addresses are on the v2 roadmap.
+              Legacy endpoints created before payout wallets settle to the
+              platform treasury and are credited in the ledger.
             </p>
           </CardContent>
         </Card>
@@ -99,9 +105,9 @@ export default function Docs() {
               The repo ships a buyer script that performs the full 402 flow
               against any listed endpoint using a funded Arc wallet:
             </p>
-            <Code>{`BUYER_PRIVATE_KEY=0x... \
-PAYGATE_URL=https://<deployment> \
-SLUG=weather-now \
+            <Code>{`BUYER_PRIVATE_KEY=0x... \\
+PAYGATE_URL=https://<deployment> \\
+SLUG=weather-now \\
 npx tsx scripts/demo-buyer.ts`}</Code>
           </CardContent>
         </Card>

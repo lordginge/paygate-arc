@@ -49,7 +49,9 @@ export default function Sell() {
         <h1 className="text-3xl font-bold text-white">Sell on PayGate</h1>
         <p className="mt-2 text-white/50">
           Two steps: register your payout identity, then wrap an API with an
-          x402 paywall priced in USDC on Arc.
+          x402 paywall priced in USDC on Arc. Registration provisions a
+          dedicated Circle payout wallet, so every call settles straight to
+          you.
         </p>
 
         {msg && (

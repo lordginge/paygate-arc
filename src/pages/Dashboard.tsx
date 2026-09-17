@@ -33,6 +33,10 @@ export default function Dashboard() {
     { enabled: /^0x[a-fA-F0-9]{40}$/.test(submitted) },
   );
   const feed = trpc.marketplace.recentPayments.useQuery({ limit: 25 });
+  const utils = trpc.useUtils();
+  const withdraw = trpc.marketplace.withdraw.useMutation({
+    onSuccess: () => utils.marketplace.sellerStats.invalidate(),
+  });
 
   const payments = (feed.data ?? []) as unknown as PaymentRow[];
 
@@ -64,6 +68,48 @@ export default function Dashboard() {
 
         {stats.data && (
           <div className="mt-8 space-y-6">
+            {stats.data.payoutAddress && (
+              <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
+                <CardContent className="pt-4 flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <div className="text-xs text-white/50">
+                      Payout wallet (Circle, settles directly per call)
+                    </div>
+                    <code className="text-sm text-[#5AB0FF]">
+                      {stats.data.payoutAddress}
+                    </code>
+                    <div className="mt-1 text-xs text-white/35">
+                      Balance:{" "}
+                      {stats.data.payoutBalance != null
+                        ? `$${stats.data.payoutBalance.toFixed(4)} USDC`
+                        : "unavailable"}
+                    </div>
+                  </div>
+                  <Button
+                    className="bg-[#2775CA] hover:bg-[#1f63ad] text-white"
+                    disabled={
+                      withdraw.isPending ||
+                      !stats.data.payoutBalance ||
+                      stats.data.payoutBalance <= 0
+                    }
+                    onClick={() => withdraw.mutate({ walletAddress: submitted })}
+                  >
+                    {withdraw.isPending ? "Withdrawing..." : "Withdraw to my wallet"}
+                  </Button>
+                </CardContent>
+                {withdraw.data && (
+                  <CardContent className="pt-0 text-xs text-white/50">
+                    Withdrawal submitted: {withdraw.data.amount.toFixed(4)} USDC
+                    to {withdraw.data.to} (tx {withdraw.data.transactionId})
+                  </CardContent>
+                )}
+                {withdraw.error && (
+                  <CardContent className="pt-0 text-xs text-red-400">
+                    {withdraw.error.message}
+                  </CardContent>
+                )}
+              </Card>
+            )}
             <div className="grid grid-cols-3 gap-4">
               <Card className="bg-[#050617]/70 border-white/10 backdrop-blur-md">
                 <CardContent className="pt-4">
