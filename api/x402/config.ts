@@ -1,7 +1,9 @@
 // Arc mainnet + Circle Facilitator Service configuration.
 // Secrets come from the environment and are never committed.
 
-import "dotenv/config";
+import { loadDotenv } from "../lib/dotenv-safe";
+
+await loadDotenv();
 
 export const ARC_CHAIN_ID = Number(process.env.ARC_CHAIN_ID ?? "5042"); // Arc mainnet
 export const ARC_NETWORK = `eip155:${ARC_CHAIN_ID}`;

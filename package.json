@@ -5,13 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\"",
+    "build": "vite build && esbuild api/node.ts --platform=node --bundle --format=esm --outdir=dist --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\"",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "NODE_ENV=production node dist/boot.js",
+    "start": "NODE_ENV=production node dist/node.js",
     "check": "tsc -b",
     "format": "prettier --write .",
-    "buyer": "tsx scripts/demo-buyer.ts"
+    "buyer": "tsx scripts/demo-buyer.ts",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@hono/node-server": "^1.14.3",
@@ -58,6 +59,7 @@
     "tsx": "^4.20.3",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "wrangler": "^4.86.0"
   }
 }
