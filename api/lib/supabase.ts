@@ -43,6 +43,21 @@ export async function sbInsert<T = Record<string, unknown>>(
   return (await res.json()) as T[];
 }
 
+export async function sbRpc<T = unknown>(
+  fn: string,
+  args: Record<string, unknown>,
+): Promise<T> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(args),
+  });
+  if (!res.ok) {
+    throw new Error(`Supabase rpc ${fn} failed: ${res.status} ${await res.text()}`);
+  }
+  return (await res.json()) as T;
+}
+
 export async function sbUpsert<T = Record<string, unknown>>(
   table: string,
   row: T,
