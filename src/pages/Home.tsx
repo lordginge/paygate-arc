@@ -1,5 +1,6 @@
 import { SiteHeader } from "@/components/SiteHeader";
 import { Fibres } from "@/components/Fibres";
+import LiveTxTicker from "@/components/LiveTxTicker";
 import { trpc } from "@/providers/trpc";
 import { ArrowUpRight, Copy, Check, Pause, Play } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -64,23 +65,22 @@ export default function Home() {
         </div>
 
         <h1
-          className="mt-10 font-medium text-white"
+          className="m3-display mt-10 text-white"
           style={{
             fontSize: "clamp(2.6rem, 6.2vw, 5.25rem)",
-            letterSpacing: "-0.045em",
-            lineHeight: 1.0,
           }}
         >
-          Give your API
+          Turn API calls
           <br />
-          a price tag.
+          into collateral.
         </h1>
 
         <p className="mt-8 max-w-xl text-[15px] leading-relaxed text-white/50">
           PayGate wraps any HTTP endpoint with an x402 paywall. Agents and
           developers pay per call in native USDC on Arc, settled in real time
-          by Circle&rsquo;s Facilitator Service straight to the seller&rsquo;s
-          own payout wallet. Sub-cent pricing. No accounts for buyers.
+          by Circle&rsquo;s Facilitator Service. Every call pays. Every payment
+          builds credit: seller float is supplied to Aave V4 as collateral,
+          turning on-chain revenue into working capital.
         </p>
 
         <div className="mt-12 flex flex-wrap gap-4">
@@ -90,6 +90,11 @@ export default function Home() {
           <a href="/docs" className="btn-block-ghost">
             Read the docs
           </a>
+        </div>
+
+        {/* Live settle ticker: latest payment, click through to explorer */}
+        <div className="mt-10 inline-block">
+          <LiveTxTicker />
         </div>
 
         {/* Stats strip */}
@@ -120,7 +125,7 @@ export default function Home() {
       <section className="relative mx-auto max-w-6xl px-6 pb-24">
         <div className="border-t border-white/10 pt-12">
           <span className="mono-label text-[#3B6DFF]">How it works</span>
-          <div className="mt-8 grid gap-px bg-white/10 border border-white/10 md:grid-cols-3">
+          <div className="mt-8 grid gap-px bg-white/10 border border-white/10 md:grid-cols-2 lg:grid-cols-4">
             {[
               {
                 n: "01",
@@ -136,6 +141,11 @@ export default function Home() {
                 n: "03",
                 t: "Settle",
                 d: "Circle Facilitator settles on Arc in real time, straight to your Circle payout wallet. Withdraw any time.",
+              },
+              {
+                n: "04",
+                t: "Compound",
+                d: "Seller float is supplied to Aave V4 as USDC collateral. Your payment history becomes your credit line: borrow working capital against future revenue instead of cashing out.",
               },
             ].map((s) => (
               <div key={s.n} className="bg-[#050505] p-8">
@@ -155,7 +165,7 @@ export default function Home() {
         <div className="mb-2 flex items-baseline justify-between border-t border-white/10 pt-12">
           <div>
             <span className="mono-label text-[#3B6DFF]">Directory</span>
-            <h2 className="mt-3 text-2xl font-medium tracking-tight text-white">
+            <h2 className="m3-headline mt-3 text-2xl text-white">
               Endpoints for sale
             </h2>
           </div>
@@ -165,7 +175,7 @@ export default function Home() {
         </div>
 
         {endpoints.isLoading && (
-          <p className="py-10 mono-label text-white/35">Loading endpoints…</p>
+          <p className="py-10 mono-label text-white/35">Loading endpoints\u2026</p>
         )}
         {!endpoints.isLoading && rows.length === 0 && (
           <p className="py-10 text-sm text-white/50">
@@ -249,8 +259,8 @@ export default function Home() {
               lineHeight: 1.1,
             }}
           >
-            One header. One signature.{" "}
-            <span className="text-[#3B6DFF]">Payment settled on-chain.</span>
+            Every call pays.{" "}
+            <span className="text-[#3B6DFF]">Every payment builds credit.</span>
           </p>
           <div className="mt-10 flex flex-wrap gap-10">
             <a href="/sell" className="mono-label link-line text-white/80">
