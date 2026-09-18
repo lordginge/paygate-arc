@@ -46,7 +46,7 @@ export default function Sell() {
       <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
       <SiteHeader />
       <div className="mx-auto max-w-2xl px-4 py-12">
-        <h1 className="text-3xl font-bold text-white">Sell on PayGate</h1>
+        <h1 className="m3-headline text-3xl text-white">Sell on PayGate</h1>
         <p className="mt-2 text-white/50">
           Two steps: register your payout identity, then wrap an API with an
           x402 paywall priced in USDC on Arc. Registration provisions a
