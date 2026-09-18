@@ -4,6 +4,7 @@
   "compatibility_date": "2026-05-01",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
+  "keep_vars": true,
   "routes": [
     { "pattern": "paygatex402.com", "custom_domain": true },
     { "pattern": "www.paygatex402.com", "custom_domain": true }
