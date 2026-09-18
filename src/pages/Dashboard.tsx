@@ -45,7 +45,7 @@ export default function Dashboard() {
       <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
       <SiteHeader />
       <div className="mx-auto max-w-6xl px-4 py-12">
-        <h1 className="text-3xl font-bold text-white">Seller dashboard</h1>
+        <h1 className="m3-headline text-3xl text-white">Seller dashboard</h1>
         <p className="mt-2 text-white/50">
           Enter your Arc wallet address to see endpoints, earnings and payment
           history.
