@@ -277,13 +277,14 @@ x402Gateway.all("/:slug", async (c) => {
     // "paygate-trial:<slug>:<ts>", 5-minute window). Deducts from the
     // wallet's voucher via the redeem_credit RPC; no USDC moves.
     trialMode = true;
+    const walletHdr = trialWallet!;
     const ts = Number(trialTs);
     if (!Number.isFinite(ts) || Math.abs(Math.floor(Date.now() / 1000) - ts) > 300) {
       return c.json({ error: "Trial timestamp outside the 5-minute window" }, 402);
     }
     const { verifyMessage } = await import("viem");
     const ok = await verifyMessage({
-      address: trialWallet as `0x${string}`,
+      address: walletHdr as `0x${string}`,
       message: `paygate-trial:${slug}:${trialTs}`,
       signature: trialSig!,
     });
@@ -292,7 +293,7 @@ x402Gateway.all("/:slug", async (c) => {
     const { sbRpc } = await import("../lib/supabase");
     const price = Number(endpoint.price_usdc);
     const redeemed = await sbRpc<boolean>("redeem_credit", {
-      p_wallet: trialWallet.toLowerCase(),
+      p_wallet: walletHdr.toLowerCase(),
       p_amount: price,
     }).catch(() => false);
     if (!redeemed) {
@@ -301,7 +302,7 @@ x402Gateway.all("/:slug", async (c) => {
         402,
       );
     }
-    payer = trialWallet.toLowerCase();
+    payer = walletHdr.toLowerCase();
   }
 
   // Log the settled payment.
