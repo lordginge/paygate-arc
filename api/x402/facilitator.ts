@@ -35,14 +35,23 @@ async function facilitatorFetch(
   body?: unknown,
 ): Promise<Response> {
   const bodyStr = body ? JSON.stringify(body) : "";
-  const proof = await buildSellerProof(purpose, body ? "POST" : "GET", bodyStr, payee);
+  // Exactly ONE auth mode per request: Bearer API key when configured,
+  // otherwise the seller-proof envelope. Sending both triggers
+  // "mixed_authentication_modes" from the facilitator.
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (CIRCLE_API_KEY) {
+    headers["Authorization"] = `Bearer ${CIRCLE_API_KEY}`;
+  } else {
+    headers["Facilitator-Seller-Proof"] = await buildSellerProof(
+      purpose,
+      body ? "POST" : "GET",
+      bodyStr,
+      payee,
+    );
+  }
   return fetch(`${FACILITATOR_BASE}${path}`, {
     method: body ? "POST" : "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${CIRCLE_API_KEY}`,
-      "Facilitator-Seller-Proof": proof,
-    },
+    headers,
     body: body ? bodyStr : undefined,
   });
 }
