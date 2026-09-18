@@ -17,7 +17,7 @@ export default function Docs() {
       <SiteHeader />
       <div className="mx-auto max-w-3xl px-4 py-12 space-y-8">
         <div>
-          <h1 className="text-3xl font-bold text-white">How PayGate works</h1>
+          <h1 className="m3-headline text-3xl text-white">How PayGate works</h1>
           <p className="mt-2 text-white/50">
             PayGate is a pay-per-call API marketplace on Arc mainnet. Every
             endpoint speaks x402 v2 with the exact scheme, settled by Circle's
