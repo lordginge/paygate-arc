@@ -326,15 +326,9 @@ x402Gateway.all("/:slug", async (c) => {
   }).catch((e) => console.error("payment log failed:", e));
 
   // Proxy the call to the seller's upstream API.
-  // Relative upstreams resolve against this deployment's own origin,
-  // so first-party PayGate data endpoints work identically in dev and prod.
-  const upstreamUrl = endpoint.upstream_url.startsWith("/")
-    ? new URL(endpoint.upstream_url, new URL(c.req.url).origin)
-    : new URL(endpoint.upstream_url);
-  resourceUrl.searchParams.forEach((v, k) =>
-    upstreamUrl.searchParams.append(k, v),
-  );
-
+  // Relative upstreams (first-party /api/data/* endpoints) are dispatched
+  // in-process: a Worker fetching its own public hostname trips Cloudflare's
+  // loop protection (522), so we call the data router directly instead.
   const fwdHeaders = new Headers();
   c.req.raw.headers.forEach((value, key) => {
     if (!HOP_BY_HOP.has(key.toLowerCase())) fwdHeaders.set(key, value);
@@ -344,11 +338,30 @@ x402Gateway.all("/:slug", async (c) => {
   if (txHash) fwdHeaders.set("x-payment-tx", txHash);
 
   const hasBody = !["GET", "HEAD"].includes(c.req.method);
-  const upstream = await fetch(upstreamUrl, {
-    method: c.req.method,
-    headers: fwdHeaders,
-    body: hasBody ? await c.req.raw.arrayBuffer() : undefined,
-  });
+
+  let upstream: Response;
+  if (endpoint.upstream_url.startsWith("/")) {
+    const { dataApi } = await import("../data");
+    const u = new URL(endpoint.upstream_url, "http://internal");
+    resourceUrl.searchParams.forEach((v, k) => u.searchParams.append(k, v));
+    const internalPath =
+      u.pathname.replace(/^\/api\/data/, "") + u.search;
+    upstream = await dataApi.request(internalPath, {
+      method: c.req.method,
+      headers: fwdHeaders,
+      body: hasBody ? await c.req.raw.arrayBuffer() : undefined,
+    });
+  } else {
+    const upstreamUrl = new URL(endpoint.upstream_url);
+    resourceUrl.searchParams.forEach((v, k) =>
+      upstreamUrl.searchParams.append(k, v),
+    );
+    upstream = await fetch(upstreamUrl, {
+      method: c.req.method,
+      headers: fwdHeaders,
+      body: hasBody ? await c.req.raw.arrayBuffer() : undefined,
+    });
+  }
 
   const responseHeaders = new Headers();
   const contentType = upstream.headers.get("content-type");
