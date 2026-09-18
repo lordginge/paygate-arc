@@ -3,6 +3,11 @@
   "main": "api/worker.ts",
   "compatibility_date": "2026-05-01",
   "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "paygatex402.com", "custom_domain": true },
+    { "pattern": "www.paygatex402.com", "custom_domain": true }
+  ],
   "assets": {
     "directory": "./dist/public",
     "binding": "ASSETS",
@@ -12,6 +17,7 @@
     "ARC_CHAIN_ID": "5042",
     "USDC_ADDRESS": "0x3600000000000000000000000000000000000000",
     "SUPABASE_URL": "https://xdsgayetciytzopnzjab.supabase.co",
-    "SUPABASE_KEY": "sb_publishable_X5xs9SvcCHuD3-KGpeBO_w_lre-Kp2E"
+    "SUPABASE_KEY": "sb_publishable_X5xs9SvcCHuD3-KGpeBO_w_lre-Kp2E",
+    "ONRAMP_REFERRER_DOMAIN": "paygatex402.com"
   }
 }
