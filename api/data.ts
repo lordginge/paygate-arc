@@ -5,7 +5,7 @@
 import { Hono } from "hono";
 import { toFunctionSelector } from "viem";
 import { arcRpc } from "./x402/config";
-import { sbInsert } from "./lib/supabase";
+import { sbInsert, sbSelect } from "./lib/supabase";
 
 const SPOKE = "0xB843bdC3a87A05E77E07Df9FE48928b3A34b134d";
 
@@ -43,9 +43,8 @@ export const dataApi = new Hono();
 // 24h ticker stats (port of PerCall /ticker/:symbol, settled on Arc)
 dataApi.get("/ticker/:symbol", async (c) => {
   try {
-    const d = (await binance(
-      `/api/v3/ticker/24hr?symbol=${normSymbol(c.req.param("symbol"))}`,
-    )) as Record<string, string>;
+    const symbol = normSymbol(c.req.param("symbol"));
+    const d = (await binance(`/api/v3/ticker/24hr?symbol=${symbol}`)) as Record<string, string>;
     return c.json({
       symbol: d.symbol,
       lastPrice: d.lastPrice,
@@ -55,101 +54,87 @@ dataApi.get("/ticker/:symbol", async (c) => {
       volume24h: d.volume,
       quoteVolume24h: d.quoteVolume,
       trades24h: d.count,
-      source: "binance-spot",
     });
   } catch (e) {
-    return c.json({ error: "upstream unavailable", detail: String(e) }, 502);
+    return c.json({ error: "market data unavailable", detail: String(e) }, 502);
   }
 });
 
-// Order book depth (port of PerCall /depth/:symbol)
+// Order book depth snapshot (port of PerCall /depth/:symbol)
 dataApi.get("/depth/:symbol", async (c) => {
   try {
-    const d = (await binance(
-      `/api/v3/depth?symbol=${normSymbol(c.req.param("symbol"))}&limit=20`,
-    )) as { bids: [string, string][]; asks: [string, string][] };
+    const symbol = normSymbol(c.req.param("symbol"));
+    const d = (await binance(`/api/v3/depth?symbol=${symbol}&limit=10`)) as {
+      bids: [string, string][];
+      asks: [string, string][];
+    };
     return c.json({
-      symbol: normSymbol(c.req.param("symbol")),
+      symbol,
       bids: d.bids,
       asks: d.asks,
-      levels: 20,
-      source: "binance-spot",
+      bestBid: d.bids[0]?.[0] ?? null,
+      bestAsk: d.asks[0]?.[0] ?? null,
+      spread: d.bids[0] && d.asks[0] ? (Number(d.asks[0][0]) - Number(d.bids[0][0])).toFixed(2) : null,
     });
   } catch (e) {
-    return c.json({ error: "upstream unavailable", detail: String(e) }, 502);
+    return c.json({ error: "market data unavailable", detail: String(e) }, 502);
   }
 });
 
-// Momentum signal (port of PerCall /signals/momentum):
-// 24h and 7d return from hourly klines, plus realised vol.
+// Simple momentum signal derived from recent klines (port of PerCall
+// /signals/momentum/:symbol).
 dataApi.get("/signals/momentum/:symbol", async (c) => {
   try {
-    const klines = (await binance(
-      `/api/v3/klines?symbol=${normSymbol(c.req.param("symbol"))}&interval=1h&limit=168`,
-    )) as [number, string, string, string, string, string][];
+    const symbol = normSymbol(c.req.param("symbol"));
+    const klines = (await binance(`/api/v3/klines?symbol=${symbol}&interval=1h&limit=24`)) as unknown[][];
     const closes = klines.map((k) => Number(k[4]));
+    const first = closes[0];
     const last = closes[closes.length - 1];
-    const r24 = last / closes[closes.length - 25] - 1;
-    const r7d = last / closes[0] - 1;
-    const rets = closes.slice(1).map((p, i) => Math.log(p / closes[i]));
-    const mean = rets.reduce((a, b) => a + b, 0) / rets.length;
-    const vol =
-      Math.sqrt(rets.reduce((a, b) => a + (b - mean) ** 2, 0) / rets.length) *
-      Math.sqrt(24 * 365);
+    const pct = ((last - first) / first) * 100;
+    const signal = pct > 1 ? "bullish" : pct < -1 ? "bearish" : "neutral";
     return c.json({
-      symbol: normSymbol(c.req.param("symbol")),
-      last,
-      return24h: r24,
-      return7d: r7d,
-      annualisedVol: vol,
-      signal: r24 > 0.005 && r7d > 0 ? "bullish" : r24 < -0.005 && r7d < 0 ? "bearish" : "neutral",
-      source: "binance-spot-1h-klines",
+      symbol,
+      windowHours: 24,
+      firstClose: first,
+      lastClose: last,
+      changePct: pct.toFixed(3),
+      signal,
     });
   } catch (e) {
-    return c.json({ error: "upstream unavailable", detail: String(e) }, 502);
+    return c.json({ error: "market data unavailable", detail: String(e) }, 502);
   }
 });
 
-// Paid endpoint requests (upstream of the "request-endpoint" marketplace
-// listing). Only reachable after a successful Arc USDC settle; the gateway
-// forwards payer + tx headers. Params arrive as query strings.
+// Paid endpoint-request channel: agents pay the settle, then POST what they
+// want listed. Requests land in Supabase for review.
 dataApi.all("/submit-request", async (c) => {
-  const payer = c.req.header("x-payer-address") ?? "unknown";
-  const txHash = c.req.header("x-payment-tx") ?? null;
-  const q = c.req.query();
-  const title = (q.title ?? "").slice(0, 120).trim();
-  const description = (q.description ?? "").slice(0, 500).trim();
-  const category = (q.category ?? "general").slice(0, 40).trim();
-  const maxPrice = q.max_price ? Number(q.max_price) : null;
-  if (!title || !description) {
-    return c.json(
-      { error: "title and description query params are required" },
-      400,
-    );
+  let body: { title?: string; description?: string; upstream_hint?: string } = {};
+  try {
+    body = await c.req.json();
+  } catch {
+    // allow empty; query params also accepted
   }
-  if (maxPrice !== null && (!Number.isFinite(maxPrice) || maxPrice <= 0)) {
-    return c.json({ error: "max_price must be a positive number" }, 400);
-  }
+  const url = new URL(c.req.url);
+  const title = body.title ?? url.searchParams.get("title") ?? "";
+  const description = body.description ?? url.searchParams.get("description") ?? "";
+  const hint = body.upstream_hint ?? url.searchParams.get("upstream") ?? "";
+  if (!title) return c.json({ error: "title required (JSON body or ?title=)" }, 400);
+
   const rows = await sbInsert("endpoint_requests", {
-    requester_address: payer,
-    title,
-    description,
-    category,
-    max_price_usdc: maxPrice,
-    paid_tx_hash: txHash,
-  }).catch((e) => {
-    console.error("request insert failed:", e);
-    return null;
+    title: String(title).slice(0, 120),
+    description: String(description).slice(0, 1000),
+    upstream_hint: String(hint).slice(0, 300),
+    payer_address: c.req.header("x-payer-address") ?? "unknown",
+    tx_hash: c.req.header("x-payment-tx") ?? null,
   });
-  if (!rows) return c.json({ error: "could not record request" }, 500);
   return c.json({
-    recorded: true,
+    received: true,
     request: rows[0],
-    note: "Your payment is evidence of demand. Builders can claim open requests.",
+    note: "Requested endpoints are reviewed and, if viable, listed on the marketplace.",
   });
 });
 
-// Arc chain status, served over our dedicated Chainstack node.
+// Live Arc chain status via the dedicated Chainstack node.
 dataApi.get("/arc/status", async (c) => {
   try {
     const [blockHex, gasHex] = await Promise.all([
@@ -190,4 +175,30 @@ dataApi.get("/aave/rates", async (c) => {
   } catch (e) {
     return c.json({ error: "rpc unavailable", detail: String(e) }, 502);
   }
+});
+
+// Trial credit balance for a wallet (public: balances reveal nothing beyond
+// what the wallet owner already knows).
+dataApi.get("/trial/balance/:wallet", async (c) => {
+  const wallet = c.req.param("wallet").toLowerCase();
+  if (!/^0x[0-9a-f]{40}$/.test(wallet)) {
+    return c.json({ error: "invalid wallet address" }, 400);
+  }
+  const rows = await sbSelect<{
+    credits_total: number;
+    credits_used: number;
+    expires_at: string;
+  }>(
+    "trial_vouchers",
+    `wallet_address=eq.${wallet}&select=credits_total,credits_used,expires_at`,
+  );
+  const v = rows[0];
+  if (!v) return c.json({ claimed: false, balance_usdc: 0 });
+  const expired = new Date(v.expires_at).getTime() < Date.now();
+  return c.json({
+    claimed: true,
+    expired,
+    expires_at: v.expires_at,
+    balance_usdc: expired ? 0 : Number(v.credits_total) - Number(v.credits_used),
+  });
 });
