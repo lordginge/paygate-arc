@@ -17,6 +17,7 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@circle-fin/app-kit": "^1.15.2",
     "@circle-fin/developer-controlled-wallets": "^10.6.0",
     "@hono/node-server": "^1.14.3",
     "@hookform/resolvers": "^5.2.2",

@@ -1,7 +1,7 @@
 // Demo buyer agent: performs the full x402 flow against a PayGate endpoint
 // on Arc mainnet. Needs a wallet funded with a little USDC on Arc.
 //
-//   BUYER_PRIVATE_KEY=0x... PAYGATE_URL=http://localhost:3000 SLUG=crypto-prices \
+//   BUYER_PRIVATE_KEY=0x... PAYGATE_URL=http://localhost:3000 SLUG=weather-now \
 //     npx tsx scripts/demo-buyer.ts
 
 import { privateKeyToAccount } from "viem/accounts";
@@ -9,7 +9,7 @@ import { toHex } from "viem";
 
 const BUYER_PRIVATE_KEY = process.env.BUYER_PRIVATE_KEY as `0x${string}`;
 const BASE = process.env.PAYGATE_URL ?? "http://localhost:3000";
-const SLUG = process.env.SLUG ?? "crypto-prices";
+const SLUG = process.env.SLUG ?? "weather-now";
 
 if (!BUYER_PRIVATE_KEY) {
   console.error("Set BUYER_PRIVATE_KEY (a wallet with USDC on Arc mainnet)");
