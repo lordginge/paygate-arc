@@ -39,6 +39,16 @@ interface EndpointRow {
 
 export const x402Gateway = new Hono<{ Bindings: HttpBindings }>();
 
+// Surface the real error message instead of Hono's bare "Internal Server
+// Error" so facilitator/settle failures are diagnosable from the response.
+x402Gateway.onError((err, c) => {
+  console.error("x402 gateway error:", err);
+  return c.json(
+    { error: String((err as Error)?.message ?? err) },
+    500,
+  );
+});
+
 // ---- Trial voucher: x402-shaped, zero-value, no settle -------------------
 // First-login template call. Buyer signs a 0-value EIP-3009 authorisation
 // (same motion as a real paid call), we verify locally and issue $1 credit.
