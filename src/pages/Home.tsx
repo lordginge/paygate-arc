@@ -1,6 +1,7 @@
 import { SiteHeader } from "@/components/SiteHeader";
 import { Fibres } from "@/components/Fibres";
 import LiveTxTicker from "@/components/LiveTxTicker";
+import { TrialCard } from "@/components/TrialCard";
 import { trpc } from "@/providers/trpc";
 import { ArrowUpRight, Copy, Check, Pause, Play } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -92,6 +93,11 @@ export default function Home() {
           </a>
         </div>
 
+        {/* First-login trial: zero-value signature -> $1 credit */}
+        <div className="mt-10">
+          <TrialCard />
+        </div>
+
         {/* Live settle ticker: latest payment, click through to explorer */}
         <div className="mt-10 inline-block">
           <LiveTxTicker />
@@ -175,7 +181,7 @@ export default function Home() {
         </div>
 
         {endpoints.isLoading && (
-          <p className="py-10 mono-label text-white/35">Loading endpoints\u2026</p>
+          <p className="py-10 mono-label text-white/35">Loading endpoints…</p>
         )}
         {!endpoints.isLoading && rows.length === 0 && (
           <p className="py-10 text-sm text-white/50">
