@@ -37,11 +37,26 @@
   body {
     @apply bg-background text-foreground;
     font-family:
-      -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
-      "Inter", "Helvetica Neue", Arial, sans-serif;
+      "Roboto Flex", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial,
+      sans-serif;
+    font-variation-settings: "opsz" 14;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
+  }
+
+  /* M3 Expressive display type: wide width, heavy weight, tight tracking */
+  .m3-display {
+    font-family: "Roboto Flex", sans-serif;
+    font-variation-settings: "opsz" 144, "wdth" 151, "wght" 700, "GRAD" 100;
+    letter-spacing: -0.02em;
+    line-height: 0.95;
+  }
+
+  .m3-headline {
+    font-family: "Roboto Flex", sans-serif;
+    font-variation-settings: "opsz" 60, "wdth" 130, "wght" 650, "GRAD" 50;
+    letter-spacing: -0.015em;
   }
 
   ::-webkit-scrollbar {
@@ -56,14 +71,14 @@
 @layer components {
   /* Monospace micro-label: the backbone of the visual system */
   .mono-label {
-    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     font-size: 11px;
     letter-spacing: 0.22em;
     text-transform: uppercase;
   }
 
   .mono-chip {
-    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     font-size: 11px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
@@ -74,7 +89,7 @@
 
   /* Square buttons */
   .btn-block {
-    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     font-size: 12px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
@@ -92,7 +107,7 @@
     color: #fff;
   }
   .btn-block-ghost {
-    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     font-size: 12px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
