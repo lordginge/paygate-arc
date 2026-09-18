@@ -16,8 +16,9 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@contracts/*": ["./contracts/*"]
+      "@contracts/*": ["./contracts/*"],
+      "@db/*": ["./db/*"]
     }
   },
-  "include": ["api", "contracts"]
+  "include": ["api", "contracts", "db"]
 }

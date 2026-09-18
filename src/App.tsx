@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router'
 import Home from './pages/Home'
 import Sell from './pages/Sell'
 import Dashboard from './pages/Dashboard'
+import Fund from './pages/Fund'
 import Docs from './pages/Docs'
 
 export default function App() {
@@ -11,6 +12,7 @@ export default function App() {
       <Route path="/sell" element={<Sell />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/docs" element={<Docs />} />
+        <Route path="/fund" element={<Fund />} />
     </Routes>
   )
 }
