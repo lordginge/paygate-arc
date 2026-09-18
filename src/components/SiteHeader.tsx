@@ -5,6 +5,7 @@ const nav = [
   { to: "/sell", label: "Sell" },
   { to: "/dashboard", label: "Dashboard" },
   { to: "/docs", label: "Docs" },
+  { to: "/fund", label: "Fund" },
 ];
 
 export function SiteHeader() {
