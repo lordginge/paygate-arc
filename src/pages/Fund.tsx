@@ -15,10 +15,6 @@ export default function Fund() {
 
   const valid = /^0x[a-fA-F0-9]{40}$/.test(address.trim());
 
-  // Popup mode: the iframe variant requires an HTTPS frame-ancestor, so we
-  // open the widget in a dedicated window. The window must open synchronously
-  // inside the click handler (popup blockers), then we navigate it once the
-  // session is minted.
   async function start() {
     if (!valid || !kitRef.current) return;
     const popup = window.open("", "circle-onramp");
@@ -56,73 +52,91 @@ export default function Fund() {
   }
 
   return (
-    <div className="min-h-screen text-white/90 antialiased">
-      <Fibres
-        playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches}
-      />
+    <div className="min-h-screen text-white/90">
+      <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
       <div className="edge-fade-top" aria-hidden />
       <div className="edge-fade-bottom" aria-hidden />
       <SiteHeader />
-    <main className="relative mx-auto max-w-3xl px-6 pt-32 pb-24">
-      <p className="mono-label text-[#3B6DFF]">Fund / your wallet</p>
-      <h1 className="m3-headline mt-4 text-4xl md:text-5xl">
-        Put USDC on Arc.
-        <br />
-        <span className="text-white/40">Card, Apple Pay, Google Pay.</span>
-      </h1>
-      <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/50">
-        Buyers need USDC on Arc before their first paid call. Onramp settles
-        straight to your wallet on Arc mainnet — no exchange account, no
-        bridging, no gas token to source. Already hold USDC on another chain?
-        Bridge it in seconds over CCTP instead.
-      </p>
 
-      <div className="mt-10 border border-white/10 bg-[#050505]/80 px-6 py-6 md:px-8">
-        <p className="mono-label text-white/40">01 / DESTINATION WALLET</p>
-        <input
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          placeholder="0x… your Arc wallet address"
-          spellCheck={false}
-          className="mt-4 w-full border border-white/10 bg-transparent px-4 py-3 font-mono text-sm text-white placeholder:text-white/25 focus:border-[#3B6DFF] focus:outline-none"
-        />
-        <div className="mt-4 flex gap-3">
-          <button
-            onClick={start}
-            disabled={!valid}
-            className="btn-block disabled:cursor-not-allowed disabled:opacity-30"
-          >
-            {mounted ? "RESTART" : "CONTINUE"}
-          </button>
-          {mounted && (
-            <button onClick={stop} className="btn-block-ghost">
-              CLOSE
-            </button>
-          )}
+      <main className="relative mx-auto max-w-5xl px-6 pt-36 pb-24">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="mono-chip text-[#3B6DFF] border-[#3B6DFF]/40">Fund</span>
+          <span className="mono-chip">Card live</span>
+          <span className="mono-chip">Apple Pay soon</span>
+          <span className="mono-chip">Google Pay soon</span>
         </div>
-        {status && (
-          <p className="mono-label mt-4 text-[#3B6DFF]">{status}</p>
-        )}
-      </div>
 
-      <div className="mt-6 border border-white/10 bg-[#050505]/80 px-6 py-6 md:px-8">
-        <p className="mono-label text-white/40">02 / FROM ANOTHER CHAIN</p>
-        <p className="mt-4 text-sm leading-relaxed text-white/50">
-          USDC sitting on Ethereum, Base, Solana or 24 other networks moves to
-          Arc over CCTP in under 20 seconds. Use Circle&apos;s Bridge Kit flow
-          or the Arc bridge interface, then come back — the balance is the same
-          asset you pay per call with, and the same asset gas is paid in.
-        </p>
-        <a
-          href="https://docs.arc.io/app-kit/bridge"
-          target="_blank"
-          rel="noreferrer"
-          className="link-line mono-label mt-4 inline-block text-white/70"
+        <h1
+          className="m3-display mt-10 text-white"
+          style={{ fontSize: "clamp(2.4rem, 5.6vw, 4.8rem)" }}
         >
-          Bridge docs →
-        </a>
-      </div>
-    </main>
+          Put USDC on Arc.
+          <br />
+          <span className="text-white/35">Card today. Apple Pay and Google Pay coming soon.</span>
+        </h1>
+        <p className="mt-6 max-w-2xl text-[15px] leading-relaxed text-white/50">
+          Buyers should be one signature away from a call, not stuck funding a
+          wallet. Onramp settles straight to an Arc wallet: no exchange account,
+          no bridge detour, no gas token hunt.
+        </p>
+
+        <div className="mt-12 grid gap-4 lg:grid-cols-2">
+          <section className="m3e-frame p-7">
+            <p className="mono-label text-[#3B6DFF]">01 / Destination wallet</p>
+            <input
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="0x… your Arc wallet address"
+              spellCheck={false}
+              className="m3e-input mt-5 w-full px-4 py-4 font-mono text-sm text-white placeholder:text-white/25"
+            />
+            <div className="mt-5 flex flex-wrap gap-3">
+              <button
+                onClick={start}
+                disabled={!valid}
+                className="btn-block disabled:cursor-not-allowed disabled:opacity-30"
+              >
+                {mounted ? "RESTART" : "CONTINUE"}
+              </button>
+              {mounted && (
+                <button onClick={stop} className="btn-block-ghost">
+                  CLOSE
+                </button>
+              )}
+            </div>
+            <p className="mt-4 text-xs leading-relaxed text-white/35">
+              Card purchase is live in the Circle onramp popup. Apple Pay and
+              Google Pay are coming soon; the destination stays the same Arc USDC
+              balance either way.
+            </p>
+            {status && <p className="mono-label mt-4 text-[#3B6DFF]">{status}</p>}
+          </section>
+
+          <section className="m3e-frame p-7">
+            <p className="mono-label text-white/40">02 / Already on another chain</p>
+            <p className="mt-5 text-sm leading-relaxed text-white/50">
+              USDC on Ethereum, Base, Solana or 24 other networks moves to Arc
+              over CCTP in under 20 seconds. Same asset for calls, same asset for
+              gas, no mental swap.
+            </p>
+            <a
+              href="https://docs.arc.io/app-kit/bridge"
+              target="_blank"
+              rel="noreferrer"
+              className="link-line mono-label mt-6 inline-block text-white/75"
+            >
+              BRIDGE DOCS →
+            </a>
+            <div className="mt-10 border-t border-white/10 pt-6 rounded-[24px]">
+              <p className="mono-label text-white/30">First-time rule</p>
+              <p className="mt-3 text-sm leading-relaxed text-white/45">
+                Fund once, then every endpoint is just: choose, sign, read the
+                response. No accounts, no email gate, no dashboard maze.
+              </p>
+            </div>
+          </section>
+        </div>
+      </main>
     </div>
   );
 }

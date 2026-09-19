@@ -1,86 +1,54 @@
 import { SiteHeader } from "@/components/SiteHeader";
 import { Fibres } from "@/components/Fibres";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function Code({ children }: { children: string }) {
   return (
-    <pre className="mt-4 overflow-x-auto border border-white/10 bg-white/[0.03] p-5 font-mono text-xs leading-relaxed text-[#7CE38B]/90">
+    <pre className="mt-2 overflow-x-auto bg-black/50 border border-white/10 p-4 text-xs leading-relaxed text-emerald-200">
       {children}
     </pre>
   );
 }
 
-function Panel({
-  n,
-  title,
-  children,
-}: {
-  n: string;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="border border-white/10 bg-[#050505]/80">
-      <div className="flex items-baseline gap-4 border-b border-white/10 px-6 py-4 md:px-8">
-        <span className="mono-label text-white/25">{n}</span>
-        <h2 className="m3-headline text-lg text-white">{title}</h2>
-      </div>
-      <div className="space-y-4 px-6 py-6 text-sm leading-relaxed text-white/50 md:px-8">
-        {children}
-      </div>
-    </section>
-  );
-}
-
 export default function Docs() {
   return (
-    <div className="min-h-screen text-white/90 antialiased">
-      <Fibres
-        playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches}
-      />
+    <div className="min-h-screen text-white/90">
+      <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
+      <SiteHeader />
       <div className="edge-fade-top" aria-hidden />
       <div className="edge-fade-bottom" aria-hidden />
-      <SiteHeader />
+      <div className="mx-auto max-w-3xl px-5 pt-36 pb-24 md:px-6 space-y-8">
+        <div>
+          <h1 className="m3-headline text-3xl text-white">How PayGate works</h1>
+          <p className="mt-2 text-white/50">
+            PayGate is a pay-per-call API marketplace on Arc mainnet. Every
+            endpoint speaks x402 v2 with the exact scheme, settled by Circle's
+            Facilitator Service in native USDC.
+          </p>
+        </div>
 
-      <main className="relative mx-auto max-w-3xl px-6 pt-32 pb-24">
-        <span className="mono-label text-[#3B6DFF]">Docs</span>
-        <h1
-          className="m3-display mt-6 text-white"
-          style={{ fontSize: "clamp(2.2rem, 5vw, 3.5rem)" }}
-        >
-          How PayGate works.
-        </h1>
-        <p className="mt-6 max-w-xl text-[15px] leading-relaxed text-white/50">
-          A pay-per-call API marketplace on Arc mainnet. Every endpoint speaks
-          x402 v2 with the exact scheme, settled by Circle&rsquo;s Facilitator
-          Service in native USDC.
-        </p>
-
-        <div className="mt-14 space-y-6">
-          <Panel n="01" title="For buyers and agents">
+        <Card className="m3e-frame">
+          <CardHeader>
+            <CardTitle className="text-white text-base">For buyers and agents</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-white/80 space-y-3">
             <p>
               1. Call any endpoint URL. Unpaid calls return HTTP 402 with a
-              base64 <code className="text-white/80">PAYMENT-REQUIRED</code>{" "}
-              header describing price, asset (USDC on Arc, chain ID 5042) and
-              recipient.
+              base64 <code>PAYMENT-REQUIRED</code> header describing price,
+              asset (USDC on Arc, chain ID 5042) and recipient.
             </p>
             <p>
-              2. Sign an EIP-3009{" "}
-              <code className="text-white/80">TransferWithAuthorization</code>{" "}
+              2. Sign an EIP-3009 <code>TransferWithAuthorization</code>{" "}
               against the USDC contract{" "}
-              <code className="text-white/80">
-                0x3600000000000000000000000000000000000000
-              </code>{" "}
-              (domain: name &ldquo;USDC&rdquo;, version &ldquo;2&rdquo;, chainId
-              5042).
+              <code>0x3600000000000000000000000000000000000000</code> (domain:
+              name "USDC", version "2", chainId 5042).
             </p>
             <p>
-              3. Retry the request with a{" "}
-              <code className="text-white/80">Payment-Signature</code> header
+              3. Retry the request with a <code>Payment-Signature</code> header
               carrying the base64-encoded payment payload. PayGate settles via
-              Circle Facilitator and proxies the call to the seller&rsquo;s
-              upstream API. The response includes an{" "}
-              <code className="text-white/80">X-Payment-Receipt</code> header
-              with the Arc transaction hash.
+              Circle Facilitator and proxies the call to the seller's upstream
+              API. The response includes an <code>X-Payment-Receipt</code>{" "}
+              header with the Arc transaction hash.
             </p>
             <Code>{`// 402 challenge (decoded)
 {
@@ -97,53 +65,78 @@ export default function Docs() {
                "assetTransferMethod": "eip3009" }
   }]
 }`}</Code>
-          </Panel>
+          </CardContent>
+        </Card>
 
-          <Panel n="02" title="For sellers">
+        <Card className="m3e-frame">
+          <CardHeader>
+            <CardTitle className="text-white text-base">For sellers</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-white/80 space-y-3">
             <p>
-              Register on the Sell page with your Arc address, list an endpoint
-              with an upstream URL and a USDC price, and share the generated{" "}
-              <code className="text-white/80">/api/x402/&lt;slug&gt;</code> URL.
-              Unpaid traffic never reaches your upstream.
+              Register on the Sell page with your Arc address, list an
+              endpoint with an upstream URL and a USDC price, and share the
+              generated <code>/api/x402/&lt;slug&gt;</code> URL. Unpaid traffic
+              never reaches your upstream.
             </p>
             <p>
-              Settlement runs through Circle Facilitator Service, so there is no
-              relayer or gas wallet to operate. Payments are logged per endpoint
-              and visible on your dashboard with Arc explorer links.
+              Settlement runs through Circle Facilitator Service, so there is
+              no relayer or gas wallet to operate. Payments are logged per
+              endpoint and visible on your dashboard with Arc explorer links.
             </p>
             <p>
-              Each seller gets a dedicated Circle developer-controlled wallet on
-              Arc at registration. Endpoints settle directly to that wallet, and
-              the seller proof is signed through Circle&rsquo;s Sign API, so no
-              private key ever touches PayGate&rsquo;s servers. Withdraw to your
-              own address any time from the dashboard.
+              Each seller gets a dedicated Circle developer-controlled wallet
+              on Arc at registration. Endpoints settle directly to that
+              wallet, and the seller proof is signed through Circle's Sign
+              API, so no private key ever touches PayGate's servers. Withdraw
+              to your own address any time from the dashboard.
             </p>
-            <p className="mono-label text-white/30">
-              Legacy endpoints settle to the platform treasury and are credited
-              in the ledger.
+            <p className="text-white/35 text-xs">
+              Legacy endpoints created before payout wallets settle to the
+              platform treasury and are credited in the ledger.
             </p>
-          </Panel>
+          </CardContent>
+        </Card>
 
-          <Panel n="03" title="Try it in your browser">
+        <Card className="m3e-frame">
+          <CardHeader>
+            <CardTitle className="text-white text-base">
+              Can x402 send tweets? Yes, as a paid upstream
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-white/80">
             <p>
-              No terminal needed. On the home page, the{" "}
-              <span className="text-white">Pay &amp; call</span> card runs the
-              whole flow for you: connect a wallet with USDC on Arc, pick an
-              endpoint, sign one authorisation, and the response plus Arc
-              transaction link appear in place. The free trial next to it does
-              the same motion with credit, so no funds move.
+              Wrap X's <span className="font-mono">POST /2/tweets</span> behind
+              a PayGate endpoint. The seller upstream holds its own X
+              credentials; PayGate never stores social keys. A buyer pays the
+              exact USDC price on Arc, sends the tweet text in the request body,
+              and only after payment verifies does PayGate forward the call to
+              the upstream, which posts it. The same pattern covers Telegram,
+              Discord webhooks, storage writes or any action API.
             </p>
+            <p className="mt-3 text-xs text-white/40">
+              Rule: X tokens stay in the upstream service, never in the PayGate
+              listing or frontend.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="m3e-frame">
+          <CardHeader>
+            <CardTitle className="text-white text-base">Try the demo buyer</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-white/80">
             <p>
-              Prefer code? The repo ships a buyer script that performs the full
-              402 flow against any listed endpoint using a funded Arc wallet:
+              The repo ships a buyer script that performs the full 402 flow
+              against any listed endpoint using a funded Arc wallet:
             </p>
             <Code>{`BUYER_PRIVATE_KEY=0x... \\
-PAYGATE_URL=https://paygatex402.com \\
+PAYGATE_URL=https://<deployment> \\
 SLUG=weather-now \\
 npx tsx scripts/demo-buyer.ts`}</Code>
-          </Panel>
-        </div>
-      </main>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
