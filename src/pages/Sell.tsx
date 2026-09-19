@@ -1,12 +1,11 @@
 import { SiteHeader } from "@/components/SiteHeader";
 import { Fibres } from "@/components/Fibres";
 import { trpc } from "@/providers/trpc";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
+
+const field =
+  "mt-2 w-full border border-white/10 bg-transparent px-4 py-3 font-mono text-sm text-white placeholder:text-white/25 focus:border-[#3B6DFF] focus:outline-none";
+const label = "mono-label text-white/40";
 
 export default function Sell() {
   const [wallet, setWallet] = useState("");
@@ -24,9 +23,9 @@ export default function Sell() {
   const registerSeller = trpc.marketplace.registerSeller.useMutation({
     onSuccess: () => {
       setSellerReady(true);
-      setMsg("Seller registered. Now list your first endpoint.");
+      setMsg("SELLER REGISTERED — NOW LIST YOUR FIRST ENDPOINT");
     },
-    onError: (e) => setMsg(`Error: ${e.message}`),
+    onError: (e) => setMsg(`ERROR: ${e.message.toUpperCase()}`),
   });
 
   const utils = trpc.useUtils();
@@ -34,20 +33,33 @@ export default function Sell() {
     onSuccess: (row) => {
       const r = row as { slug?: string };
       setMsg(
-        `Endpoint live at ${window.location.origin}/api/x402/${r.slug ?? slug}`,
+        `ENDPOINT LIVE — ${window.location.origin}/api/x402/${r.slug ?? slug}`,
       );
       utils.marketplace.listEndpoints.invalidate();
     },
-    onError: (e) => setMsg(`Error: ${e.message}`),
+    onError: (e) => setMsg(`ERROR: ${e.message.toUpperCase()}`),
   });
 
   return (
-    <div className="min-h-screen text-white/90">
-      <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
+    <div className="min-h-screen text-white/90 antialiased">
+      <Fibres
+        playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches}
+      />
+      <div className="edge-fade-top" aria-hidden />
+      <div className="edge-fade-bottom" aria-hidden />
       <SiteHeader />
-      <div className="mx-auto max-w-2xl px-4 py-12">
-        <h1 className="m3-headline text-3xl text-white">Sell on PayGate</h1>
-        <p className="mt-2 text-white/50">
+
+      <main className="relative mx-auto max-w-2xl px-6 pt-32 pb-24">
+        <span className="mono-label text-[#3B6DFF]">Sell</span>
+        <h1
+          className="m3-display mt-6 text-white"
+          style={{ fontSize: "clamp(2.2rem, 5vw, 3.5rem)" }}
+        >
+          Every endpoint,
+          <br />
+          a revenue line.
+        </h1>
+        <p className="mt-6 max-w-xl text-[15px] leading-relaxed text-white/50">
           Two steps: register your payout identity, then wrap an API with an
           x402 paywall priced in USDC on Arc. Registration provisions a
           dedicated Circle payout wallet, so every call settles straight to
@@ -55,120 +67,128 @@ export default function Sell() {
         </p>
 
         {msg && (
-          <div className="mt-4 rounded-lg border border-[#3B6DFF]/30 bg-[#3B6DFF]/10 px-4 py-3 text-sm text-[#3B6DFF]">
+          <p className="mono-label mt-8 border border-[#3B6DFF]/40 bg-[#3B6DFF]/10 px-4 py-3 text-[#3B6DFF]">
             {msg}
-          </div>
+          </p>
         )}
 
-        <Card className="mt-8 bg-black/70 border-white/10 backdrop-blur-md rounded-none">
-          <CardHeader>
-            <CardTitle className="text-white">1. Register as a seller</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        {/* Step 01 */}
+        <section className="mt-14 border border-white/10 bg-[#050505]/80">
+          <div className="flex items-baseline gap-4 border-b border-white/10 px-6 py-4 md:px-8">
+            <span className="mono-label text-white/25">01</span>
+            <h2 className="m3-headline text-lg text-white">
+              Register as a seller
+            </h2>
+          </div>
+          <div className="space-y-5 px-6 py-6 md:px-8">
             <div>
-              <Label className="text-white/80">Arc wallet address</Label>
-              <Input
+              <label className={label}>Arc wallet address</label>
+              <input
                 value={wallet}
                 onChange={(e) => setWallet(e.target.value)}
                 placeholder="0x..."
-                className="mt-1 bg-black/40 border-white/15 text-white rounded-none"
+                spellCheck={false}
+                className={field}
               />
-              <p className="mt-1 text-xs text-white/35">
-                Public address only. Never paste a private key here.
+              <p className="mono-label mt-2 text-white/25">
+                Public address only. Never paste a private key.
               </p>
             </div>
             <div>
-              <Label className="text-white/80">Display name</Label>
-              <Input
+              <label className={label}>Display name</label>
+              <input
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Acme Data Co"
-                className="mt-1 bg-black/40 border-white/15 text-white rounded-none"
+                className={field}
               />
             </div>
-            <Button
-              className="bg-[#3B6DFF] hover:bg-[#2b57d9] rounded-none text-white"
+            <button
+              className="btn-block disabled:cursor-not-allowed disabled:opacity-30"
               disabled={registerSeller.isPending || !wallet || !displayName}
               onClick={() =>
                 registerSeller.mutate({ walletAddress: wallet, displayName })
               }
             >
               {sellerReady ? "Registered" : "Register seller"}
-            </Button>
-          </CardContent>
-        </Card>
+            </button>
+          </div>
+        </section>
 
-        <Card className="mt-6 bg-black/70 border-white/10 backdrop-blur-md rounded-none">
-          <CardHeader>
-            <CardTitle className="text-white">2. List an endpoint</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+        {/* Step 02 */}
+        <section className="mt-6 border border-white/10 bg-[#050505]/80">
+          <div className="flex items-baseline gap-4 border-b border-white/10 px-6 py-4 md:px-8">
+            <span className="mono-label text-white/25">02</span>
+            <h2 className="m3-headline text-lg text-white">List an endpoint</h2>
+          </div>
+          <div className="space-y-5 px-6 py-6 md:px-8">
+            <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <Label className="text-white/80">Slug</Label>
-                <Input
+                <label className={label}>Slug</label>
+                <input
                   value={slug}
                   onChange={(e) => setSlug(e.target.value.toLowerCase())}
                   placeholder="weather-now"
-                  className="mt-1 bg-black/40 border-white/15 text-white rounded-none"
+                  spellCheck={false}
+                  className={field}
                 />
               </div>
               <div>
-                <Label className="text-white/80">Price per call (USDC)</Label>
-                <Input
+                <label className={label}>Price per call (USDC)</label>
+                <input
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   type="number"
                   step="0.0001"
                   min="0.000001"
-                  className="mt-1 bg-black/40 border-white/15 text-white rounded-none"
+                  className={field}
                 />
               </div>
             </div>
             <div>
-              <Label className="text-white/80">Name</Label>
-              <Input
+              <label className={label}>Name</label>
+              <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Live weather lookup"
-                className="mt-1 bg-black/40 border-white/15 text-white rounded-none"
+                className={field}
               />
             </div>
             <div>
-              <Label className="text-white/80">Description</Label>
-              <Textarea
+              <label className={label}>Description</label>
+              <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="What does this endpoint return?"
-                className="mt-1 bg-black/40 border-white/15 text-white rounded-none"
+                rows={3}
+                className={field}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <Label className="text-white/80">Category</Label>
-                <Input
+                <label className={label}>Category</label>
+                <input
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="mt-1 bg-black/40 border-white/15 text-white rounded-none"
+                  className={field}
                 />
               </div>
               <div>
-                <Label className="text-white/80">Upstream API URL</Label>
-                <Input
+                <label className={label}>Upstream API URL</label>
+                <input
                   value={upstreamUrl}
                   onChange={(e) => setUpstreamUrl(e.target.value)}
                   placeholder="https://api.example.com/data"
-                  className="mt-1 bg-black/40 border-white/15 text-white rounded-none"
+                  spellCheck={false}
+                  className={field}
                 />
               </div>
             </div>
-            <p className="text-xs text-white/35">
-              PayGate proxies paid calls to your upstream URL. Keep any secret
-              keys in the upstream URL or in headers your upstream requires;
-              unpaid callers never reach it.
+            <p className="mono-label text-white/25">
+              Paid calls proxy to your upstream. Unpaid callers never reach it.
             </p>
-            <Button
-              className="bg-[#3B6DFF] hover:bg-[#2b57d9] rounded-none text-white"
+            <button
+              className="btn-block disabled:cursor-not-allowed disabled:opacity-30"
               disabled={
                 createEndpoint.isPending ||
                 !sellerReady ||
@@ -189,10 +209,10 @@ export default function Sell() {
               }
             >
               Create paywalled endpoint
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+            </button>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }
