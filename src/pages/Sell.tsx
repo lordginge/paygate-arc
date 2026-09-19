@@ -1,11 +1,52 @@
 import { SiteHeader } from "@/components/SiteHeader";
 import { Fibres } from "@/components/Fibres";
 import { trpc } from "@/providers/trpc";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 
-const field =
-  "mt-2 w-full border border-white/10 bg-transparent px-4 py-3 font-mono text-sm text-white placeholder:text-white/25 focus:border-[#3B6DFF] focus:outline-none";
-const label = "mono-label text-white/40";
+const templates = [
+  {
+    label: "Data lookup",
+    slug: "weather-now",
+    name: "Live weather lookup",
+    category: "data",
+    upstreamUrl: "https://api.example.com/weather",
+    price: "0.01",
+    description: "Returns current weather for a city or coordinate pair.",
+  },
+  {
+    label: "AI answer",
+    slug: "ask-brief",
+    name: "One-shot AI brief",
+    category: "ai",
+    upstreamUrl: "https://api.example.com/ask",
+    price: "0.05",
+    description: "Takes ?ask= and returns a short sourced answer.",
+  },
+  {
+    label: "Fresh scrape",
+    slug: "page-signal",
+    name: "Page signal scrape",
+    category: "web",
+    upstreamUrl: "https://api.example.com/scrape",
+    price: "0.02",
+    description: "Fetches one public page and returns title, links and summary.",
+  },
+  {
+    label: "Proof of call",
+    slug: "proof-of-call",
+    name: "Timestamped degen call",
+    category: "social",
+    upstreamUrl: "https://api.example.com/proof-of-call",
+    price: "0.03",
+    description:
+      "Locks one market call by hash and timestamp. One winner or loser post only, with explicit consent.",
+  },
+];
 
 export default function Sell() {
   const [wallet, setWallet] = useState("");
@@ -19,199 +60,278 @@ export default function Sell() {
   const [category, setCategory] = useState("general");
   const [upstreamUrl, setUpstreamUrl] = useState("");
   const [price, setPrice] = useState("0.01");
+  const [stopLoss, setStopLoss] = useState("25");
+  const [published, setPublished] = useState<{ slug: string; url: string } | null>(null);
 
   const registerSeller = trpc.marketplace.registerSeller.useMutation({
     onSuccess: () => {
       setSellerReady(true);
-      setMsg("SELLER REGISTERED — NOW LIST YOUR FIRST ENDPOINT");
+      setMsg("Seller registered. Now list the call people can buy.");
     },
-    onError: (e) => setMsg(`ERROR: ${e.message.toUpperCase()}`),
+    onError: (e) => setMsg(`Error: ${e.message}`),
   });
 
   const utils = trpc.useUtils();
   const createEndpoint = trpc.marketplace.createEndpoint.useMutation({
     onSuccess: (row) => {
       const r = row as { slug?: string };
-      setMsg(
-        `ENDPOINT LIVE — ${window.location.origin}/api/x402/${r.slug ?? slug}`,
-      );
+      const s = r.slug ?? slug;
+      const url = `${window.location.origin}/api/x402/${s}`;
+      setPublished({ slug: s, url });
+      setMsg(`Live now: ${url}`);
       utils.marketplace.listEndpoints.invalidate();
     },
-    onError: (e) => setMsg(`ERROR: ${e.message.toUpperCase()}`),
+    onError: (e) => setMsg(`Error: ${e.message}`),
   });
 
+  function applyTemplate(t: (typeof templates)[number]) {
+    setSlug(t.slug);
+    setName(t.name);
+    setCategory(t.category);
+    setUpstreamUrl(t.upstreamUrl);
+    setPrice(t.price);
+    setDescription(t.description);
+    setMsg(`Template loaded: ${t.label}. Replace the upstream URL with yours.`);
+  }
+
   return (
-    <div className="min-h-screen text-white/90 antialiased">
-      <Fibres
-        playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches}
-      />
+    <div className="min-h-screen text-white/90">
+      <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
       <div className="edge-fade-top" aria-hidden />
       <div className="edge-fade-bottom" aria-hidden />
       <SiteHeader />
 
-      <main className="relative mx-auto max-w-2xl px-6 pt-32 pb-24">
-        <span className="mono-label text-[#3B6DFF]">Sell</span>
-        <h1
-          className="m3-display mt-6 text-white"
-          style={{ fontSize: "clamp(2.2rem, 5vw, 3.5rem)" }}
-        >
-          Every endpoint,
-          <br />
-          a revenue line.
+      <main className="relative mx-auto max-w-5xl px-6 pt-32 pb-24">
+        <span className="mono-chip text-[#3B6DFF] border-[#3B6DFF]/40">Sell</span>
+        <h1 className="m3-display mt-8 text-white" style={{ fontSize: "clamp(2.3rem,5vw,4.4rem)" }}>
+          Sell a call, not a subscription.
         </h1>
-        <p className="mt-6 max-w-xl text-[15px] leading-relaxed text-white/50">
-          Two steps: register your payout identity, then wrap an API with an
-          x402 paywall priced in USDC on Arc. Registration provisions a
-          dedicated Circle payout wallet, so every call settles straight to
-          you.
+        <p className="mt-6 max-w-2xl text-[15px] leading-relaxed text-white/50">
+          You bring one HTTPS endpoint. PayGate turns it into a paid x402 call:
+          buyer signs USDC on Arc, payment verifies, then PayGate forwards the
+          request to your upstream. If it does not pay, it never reaches you.
+          The slug works a bit like a domain name for one payable action:
+          memorable, ownable and priced.
         </p>
 
+        <div className="mt-10 grid gap-4 md:grid-cols-3">
+          {[
+            ["You list", "One URL, one price, one clear promise per call."],
+            ["Buyer pays", "Exact USDC amount on Arc, no account or checkout."],
+            ["You receive", "Settlement to your Circle payout wallet, withdraw any time."],
+          ].map(([t, d], i) => (
+            <div key={t} className="m3e-frame-soft p-6">
+              <p className="mono-label text-[#3B6DFF]">{String(i + 1).padStart(2, "0")}</p>
+              <p className="mt-3 text-lg font-medium text-white">{t}</p>
+              <p className="mt-2 text-sm leading-relaxed text-white/45">{d}</p>
+            </div>
+          ))}
+        </div>
+
         {msg && (
-          <p className="mono-label mt-8 border border-[#3B6DFF]/40 bg-[#3B6DFF]/10 px-4 py-3 text-[#3B6DFF]">
+          <div className="m3e-frame-soft mt-6 border-[#3B6DFF]/30 px-5 py-4 text-sm text-[#B9CCFF]">
             {msg}
-          </p>
+          </div>
         )}
 
-        {/* Step 01 */}
-        <section className="mt-14 border border-white/10 bg-[#050505]/80">
-          <div className="flex items-baseline gap-4 border-b border-white/10 px-6 py-4 md:px-8">
-            <span className="mono-label text-white/25">01</span>
-            <h2 className="m3-headline text-lg text-white">
-              Register as a seller
-            </h2>
-          </div>
-          <div className="space-y-5 px-6 py-6 md:px-8">
-            <div>
-              <label className={label}>Arc wallet address</label>
-              <input
-                value={wallet}
-                onChange={(e) => setWallet(e.target.value)}
-                placeholder="0x..."
-                spellCheck={false}
-                className={field}
-              />
-              <p className="mono-label mt-2 text-white/25">
-                Public address only. Never paste a private key.
-              </p>
-            </div>
-            <div>
-              <label className={label}>Display name</label>
-              <input
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Acme Data Co"
-                className={field}
-              />
-            </div>
-            <button
-              className="btn-block disabled:cursor-not-allowed disabled:opacity-30"
-              disabled={registerSeller.isPending || !wallet || !displayName}
-              onClick={() =>
-                registerSeller.mutate({ walletAddress: wallet, displayName })
-              }
-            >
-              {sellerReady ? "Registered" : "Register seller"}
-            </button>
-          </div>
-        </section>
+        <div className="mt-10 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+          <Card className="m3e-frame">
+            <CardHeader>
+              <CardTitle className="text-white">1. Payout identity</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label className="text-white/80">Arc wallet address</Label>
+                <Input
+                  value={wallet}
+                  onChange={(e) => setWallet(e.target.value)}
+                  placeholder="0x..."
+                  className="m3e-input mt-2 text-white"
+                />
+                <p className="mt-2 text-xs text-white/35">
+                  Public address only. Never paste a private key here.
+                </p>
+              </div>
+              <div>
+                <Label className="text-white/80">Display name</Label>
+                <Input
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Acme Data Co"
+                  className="m3e-input mt-2 text-white"
+                />
+              </div>
+              <Button
+                className="btn-block w-full"
+                disabled={registerSeller.isPending || !wallet || !displayName}
+                onClick={() =>
+                  registerSeller.mutate({ walletAddress: wallet, displayName })
+                }
+              >
+                {sellerReady ? "REGISTERED" : "REGISTER SELLER"}
+              </Button>
+            </CardContent>
+          </Card>
 
-        {/* Step 02 */}
-        <section className="mt-6 border border-white/10 bg-[#050505]/80">
-          <div className="flex items-baseline gap-4 border-b border-white/10 px-6 py-4 md:px-8">
-            <span className="mono-label text-white/25">02</span>
-            <h2 className="m3-headline text-lg text-white">List an endpoint</h2>
-          </div>
-          <div className="space-y-5 px-6 py-6 md:px-8">
-            <div className="grid gap-5 sm:grid-cols-2">
+          <Card className="m3e-frame">
+            <CardHeader>
+              <CardTitle className="text-white">2. Name your payable call</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {templates.map((t) => (
+                  <button
+                    key={t.slug}
+                    type="button"
+                    onClick={() => applyTemplate(t)}
+                    className="m3e-chip text-white/60 hover:text-white"
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-white/80">Slug</Label>
+                  <Input
+                    value={slug}
+                    onChange={(e) => setSlug(e.target.value.toLowerCase())}
+                    placeholder="weather-now"
+                    className="m3e-input mt-2 text-white"
+                  />
+                  <p className="mt-2 font-mono text-xs text-[#3B6DFF]">
+                    {typeof window !== "undefined" ? window.location.origin : ""}
+                    /api/x402/{slug || "your-name"}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-white/80">Price per call (USDC)</Label>
+                  <Input
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    type="number"
+                    step="0.0001"
+                    min="0.000001"
+                    className="m3e-input mt-2 text-white"
+                  />
+                </div>
+              </div>
               <div>
-                <label className={label}>Slug</label>
-                <input
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value.toLowerCase())}
-                  placeholder="weather-now"
-                  spellCheck={false}
-                  className={field}
+                <Label className="text-white/80">Name</Label>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Live weather lookup"
+                  className="m3e-input mt-2 text-white"
                 />
               </div>
               <div>
-                <label className={label}>Price per call (USDC)</label>
-                <input
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  type="number"
-                  step="0.0001"
-                  min="0.000001"
-                  className={field}
+                <Label className="text-white/80">Buyer promise</Label>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="What exactly does one paid call return?"
+                  className="m3e-input mt-2 text-white"
                 />
               </div>
-            </div>
-            <div>
-              <label className={label}>Name</label>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Live weather lookup"
-                className={field}
-              />
-            </div>
-            <div>
-              <label className={label}>Description</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="What does this endpoint return?"
-                rows={3}
-                className={field}
-              />
-            </div>
-            <div className="grid gap-5 sm:grid-cols-2">
-              <div>
-                <label className={label}>Category</label>
-                <input
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className={field}
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-white/80">Category</Label>
+                  <Input
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="m3e-input mt-2 text-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-white/80">Stop loss reminder (USDC/day)</Label>
+                  <Input
+                    value={stopLoss}
+                    onChange={(e) => setStopLoss(e.target.value)}
+                    type="number"
+                    min="0"
+                    step="1"
+                    className="m3e-input mt-2 text-white"
+                  />
+                </div>
               </div>
               <div>
-                <label className={label}>Upstream API URL</label>
-                <input
+                <Label className="text-white/80">Upstream HTTPS URL</Label>
+                <Input
                   value={upstreamUrl}
                   onChange={(e) => setUpstreamUrl(e.target.value)}
                   placeholder="https://api.example.com/data"
-                  spellCheck={false}
-                  className={field}
+                  className="m3e-input mt-2 text-white"
                 />
               </div>
-            </div>
-            <p className="mono-label text-white/25">
-              Paid calls proxy to your upstream. Unpaid callers never reach it.
-            </p>
-            <button
-              className="btn-block disabled:cursor-not-allowed disabled:opacity-30"
-              disabled={
-                createEndpoint.isPending ||
-                !sellerReady ||
-                !slug ||
-                !name ||
-                !upstreamUrl.startsWith("https://")
-              }
-              onClick={() =>
-                createEndpoint.mutate({
-                  walletAddress: wallet,
-                  slug,
-                  name,
-                  description,
-                  category,
-                  upstreamUrl,
-                  priceUsdc: Number(price),
-                })
-              }
-            >
-              Create paywalled endpoint
-            </button>
-          </div>
-        </section>
+              <p className="text-xs leading-relaxed text-white/35">
+                Keep secrets in your upstream service. Stop loss is a reminder
+                for your own upstream cap today; PayGate blocks unpaid traffic,
+                while your service enforces spend limits. Social posting is
+                possible only with explicit social login and user-granted
+                posting access, so treat it as a separate consent flow, not a
+                quick listing template. Never put tokens in the listing.
+              </p>
+              <Button
+                className="btn-block w-full"
+                disabled={
+                  createEndpoint.isPending ||
+                  !sellerReady ||
+                  !slug ||
+                  !name ||
+                  !upstreamUrl.startsWith("https://")
+                }
+                onClick={() =>
+                  createEndpoint.mutate({
+                    walletAddress: wallet,
+                    slug,
+                    name,
+                    description,
+                    category,
+                    upstreamUrl,
+                    priceUsdc: Number(price),
+                  })
+                }
+              >
+                PUBLISH THE CALL
+              </Button>
+
+              {published && (
+                <div className="m3e-frame-soft mt-5 border-[#7CE38B]/25 p-5">
+                  <p className="mono-label text-[#7CE38B]">Congratulations zone</p>
+                  <p className="m3-headline mt-3 text-xl text-white">
+                    {published.slug} is payable.
+                  </p>
+                  <p className="mt-2 break-all font-mono text-xs text-[#B9CCFF]">
+                    {published.url}
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="btn-block-ghost !px-4 !py-2"
+                      onClick={() => navigator.clipboard.writeText(published.url)}
+                    >
+                      COPY LINK
+                    </button>
+                    <a
+                      className="btn-block-ghost !px-4 !py-2"
+                      href={published.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      VIEW 402
+                    </a>
+                  </div>
+                  <p className="mt-4 text-xs leading-relaxed text-white/40">
+                    Next: test one unpaid call for the 402, run one paid trial
+                    call, then set your upstream stop loss reminder at $
+                    {stopLoss || "0"}/day so a viral buyer cannot surprise you.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </main>
     </div>
   );
