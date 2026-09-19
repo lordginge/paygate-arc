@@ -110,10 +110,11 @@ export async function claimVoucher(account: `0x${string}`): Promise<void> {
   }
 }
 
-// Spend trial credit on an endpoint. Returns { status, data }.
+// Spend trial credit on an endpoint. Returns { status, data, remainingHint }.
 export async function spendTrial(
   account: `0x${string}`,
   slug: string,
+  ask?: string,
 ): Promise<{ status: number; data: unknown }> {
   const eth = getProvider();
   if (!eth) throw new Error("No wallet found");
@@ -122,7 +123,8 @@ export async function spendTrial(
     method: "personal_sign",
     params: [`paygate-trial:${slug}:${ts}`, account],
   })) as string;
-  const res = await fetch(`/api/x402/${slug}`, {
+  const qs = ask?.trim() ? `?ask=${encodeURIComponent(ask.trim())}` : "";
+  const res = await fetch(`/api/x402/${slug}${qs}`, {
     headers: {
       "x-trial-wallet": account,
       "x-trial-ts": String(ts),
