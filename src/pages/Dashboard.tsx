@@ -1,17 +1,6 @@
 import { SiteHeader } from "@/components/SiteHeader";
 import { Fibres } from "@/components/Fibres";
 import { trpc } from "@/providers/trpc";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 
@@ -41,52 +30,61 @@ export default function Dashboard() {
   const payments = (feed.data ?? []) as unknown as PaymentRow[];
 
   return (
-    <div className="min-h-screen text-white/90">
-      <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
+    <div className="min-h-screen text-white/90 antialiased">
+      <Fibres
+        playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches}
+      />
+      <div className="edge-fade-top" aria-hidden />
+      <div className="edge-fade-bottom" aria-hidden />
       <SiteHeader />
-      <div className="mx-auto max-w-6xl px-4 py-12">
-        <h1 className="m3-headline text-3xl text-white">Seller dashboard</h1>
-        <p className="mt-2 text-white/50">
+
+      <main className="relative mx-auto max-w-6xl px-6 pt-32 pb-24">
+        <span className="mono-label text-[#3B6DFF]">Dashboard</span>
+        <h1
+          className="m3-display mt-6 text-white"
+          style={{ fontSize: "clamp(2.2rem, 5vw, 3.5rem)" }}
+        >
+          Your ledger.
+        </h1>
+        <p className="mt-6 max-w-xl text-[15px] leading-relaxed text-white/50">
           Enter your Arc wallet address to see endpoints, earnings and payment
           history.
         </p>
 
-        <div className="mt-6 flex gap-2 max-w-xl">
-          <Input
+        <div className="mt-10 flex max-w-xl gap-3">
+          <input
             value={wallet}
             onChange={(e) => setWallet(e.target.value)}
             placeholder="0x..."
-            className="bg-black/40 border-white/15 text-white rounded-none"
+            spellCheck={false}
+            className="w-full border border-white/10 bg-transparent px-4 py-3 font-mono text-sm text-white placeholder:text-white/25 focus:border-[#3B6DFF] focus:outline-none"
           />
-          <Button
-            className="bg-[#3B6DFF] hover:bg-[#2b57d9] rounded-none text-white"
-            onClick={() => setSubmitted(wallet)}
-          >
+          <button className="btn-block" onClick={() => setSubmitted(wallet)}>
             Load
-          </Button>
+          </button>
         </div>
 
         {stats.data && (
-          <div className="mt-8 space-y-6">
+          <div className="mt-14 space-y-6">
             {stats.data.payoutAddress && (
-              <Card className="bg-black/70 border-white/10 backdrop-blur-md rounded-none">
-                <CardContent className="pt-4 flex flex-wrap items-center justify-between gap-4">
+              <section className="border border-white/10 bg-[#050505]/80 px-6 py-6 md:px-8">
+                <div className="flex flex-wrap items-center justify-between gap-6">
                   <div>
-                    <div className="text-xs text-white/50">
-                      Payout wallet (Circle, settles directly per call)
+                    <div className="mono-label text-white/40">
+                      Payout wallet / Circle, settles per call
                     </div>
-                    <code className="text-sm text-[#3B6DFF]">
+                    <code className="mt-3 block font-mono text-sm text-[#3B6DFF]">
                       {stats.data.payoutAddress}
                     </code>
-                    <div className="mt-1 text-xs text-white/35">
+                    <div className="mono-label mt-2 text-white/30">
                       Balance:{" "}
                       {stats.data.payoutBalance != null
                         ? `$${stats.data.payoutBalance.toFixed(4)} USDC`
                         : "unavailable"}
                     </div>
                   </div>
-                  <Button
-                    className="bg-[#3B6DFF] hover:bg-[#2b57d9] rounded-none text-white"
+                  <button
+                    className="btn-block disabled:cursor-not-allowed disabled:opacity-30"
                     disabled={
                       withdraw.isPending ||
                       !stats.data.payoutBalance ||
@@ -94,147 +92,172 @@ export default function Dashboard() {
                     }
                     onClick={() => withdraw.mutate({ walletAddress: submitted })}
                   >
-                    {withdraw.isPending ? "Withdrawing..." : "Withdraw to my wallet"}
-                  </Button>
-                </CardContent>
+                    {withdraw.isPending ? "Withdrawing…" : "Withdraw"}
+                  </button>
+                </div>
                 {withdraw.data && (
-                  <CardContent className="pt-0 text-xs text-white/50">
-                    Withdrawal submitted: {withdraw.data.amount.toFixed(4)} USDC
-                    to {withdraw.data.to} (tx {withdraw.data.transactionId})
-                  </CardContent>
+                  <p className="mono-label mt-4 text-[#7CE38B]">
+                    Withdrawal submitted — {withdraw.data.amount.toFixed(4)}{" "}
+                    USDC to {withdraw.data.to} (tx{" "}
+                    {withdraw.data.transactionId})
+                  </p>
                 )}
                 {withdraw.error && (
-                  <CardContent className="pt-0 text-xs text-red-400">
+                  <p className="mono-label mt-4 text-red-400">
                     {withdraw.error.message}
-                  </CardContent>
+                  </p>
                 )}
-              </Card>
+              </section>
             )}
-            <div className="grid grid-cols-3 gap-4">
-              <Card className="bg-black/70 border-white/10 backdrop-blur-md rounded-none">
-                <CardContent className="pt-4">
-                  <div className="text-2xl font-semibold text-white">
-                    {stats.data.endpoints.length}
+
+            {/* Stats strip, same idiom as the landing hero */}
+            <div className="grid grid-cols-1 border border-white/10 sm:grid-cols-3">
+              {[
+                { label: "Endpoints", value: stats.data.endpoints.length },
+                { label: "Payments", value: stats.data.payments.length },
+                {
+                  label: "Earned, USDC",
+                  value: `$${stats.data.totalEarned.toFixed(4)}`,
+                },
+              ].map((s, i) => (
+                <div
+                  key={s.label}
+                  className={`px-6 py-6 ${i > 0 ? "border-t border-white/10 sm:border-t-0 sm:border-l" : ""}`}
+                >
+                  <div className="text-3xl font-light tracking-tight text-white tabular-nums">
+                    {s.value}
                   </div>
-                  <div className="text-xs text-white/50">Endpoints</div>
-                </CardContent>
-              </Card>
-              <Card className="bg-black/70 border-white/10 backdrop-blur-md rounded-none">
-                <CardContent className="pt-4">
-                  <div className="text-2xl font-semibold text-white">
-                    {stats.data.payments.length}
-                  </div>
-                  <div className="text-xs text-white/50">Payments</div>
-                </CardContent>
-              </Card>
-              <Card className="bg-black/70 border-white/10 backdrop-blur-md rounded-none">
-                <CardContent className="pt-4">
-                  <div className="text-2xl font-semibold text-emerald-400">
-                    ${stats.data.totalEarned.toFixed(4)}
-                  </div>
-                  <div className="text-xs text-white/50">Earned (USDC on Arc)</div>
-                </CardContent>
-              </Card>
+                  <div className="mono-label mt-2 text-white/35">{s.label}</div>
+                </div>
+              ))}
             </div>
 
-            <Card className="bg-black/70 border-white/10 backdrop-blur-md rounded-none">
-              <CardHeader>
-                <CardTitle className="text-white text-base">Your endpoints</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-white/10">
-                      <TableHead className="text-white/50">Name</TableHead>
-                      <TableHead className="text-white/50">URL</TableHead>
-                      <TableHead className="text-white/50 text-right">Price</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+            <section className="border border-white/10 bg-[#050505]/80">
+              <div className="flex items-baseline gap-4 border-b border-white/10 px-6 py-4 md:px-8">
+                <span className="mono-label text-white/25">01</span>
+                <h2 className="m3-headline text-lg text-white">
+                  Your endpoints
+                </h2>
+              </div>
+              <div className="overflow-x-auto px-6 py-4 md:px-8">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="mono-label py-3 text-left font-normal text-white/35">
+                        Name
+                      </th>
+                      <th className="mono-label py-3 text-left font-normal text-white/35">
+                        URL
+                      </th>
+                      <th className="mono-label py-3 text-right font-normal text-white/35">
+                        Price
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     {stats.data.endpoints.map((e) => (
-                      <TableRow key={e.id} className="border-white/5">
-                        <TableCell className="text-white">{e.name}</TableCell>
-                        <TableCell>
-                          <code className="text-xs text-[#3B6DFF]">
+                      <tr key={e.id} className="border-b border-white/5">
+                        <td className="py-3.5 text-white">{e.name}</td>
+                        <td className="py-3.5">
+                          <code className="font-mono text-xs text-[#3B6DFF]">
                             /api/x402/{e.slug}
                           </code>
-                        </TableCell>
-                        <TableCell className="text-right text-white/80">
+                        </td>
+                        <td className="py-3.5 text-right text-white/80 tabular-nums">
                           ${Number(e.price_usdc).toFixed(4)}
-                        </TableCell>
-                      </TableRow>
+                        </td>
+                      </tr>
                     ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                  </tbody>
+                </table>
+              </div>
+            </section>
           </div>
         )}
         {submitted && stats.data === null && (
-          <p className="mt-6 text-white/50">
+          <p className="mono-label mt-10 text-white/40">
             No seller found for that address. Register on the Sell page first.
           </p>
         )}
 
-        <h2 className="mt-14 mb-4 text-xl font-semibold text-white">
-          Live payment feed
-        </h2>
-        <Card className="bg-black/70 border-white/10 backdrop-blur-md rounded-none">
-          <CardContent className="pt-4">
+        <div className="mt-20 mb-6 flex items-baseline justify-between border-t border-white/10 pt-12">
+          <div>
+            <span className="mono-label text-[#3B6DFF]">Live</span>
+            <h2 className="m3-headline mt-3 text-2xl text-white">
+              Payment feed
+            </h2>
+          </div>
+          <span className="mono-label text-white/30">Settled on Arc</span>
+        </div>
+
+        <section className="border border-white/10 bg-[#050505]/80">
+          <div className="overflow-x-auto px-6 py-4 md:px-8">
             {payments.length === 0 && (
-              <p className="text-white/35 py-6 text-center">
+              <p className="mono-label py-8 text-center text-white/30">
                 No payments settled yet.
               </p>
             )}
             {payments.length > 0 && (
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-white/10">
-                    <TableHead className="text-white/50">Endpoint</TableHead>
-                    <TableHead className="text-white/50">Payer</TableHead>
-                    <TableHead className="text-white/50 text-right">Amount</TableHead>
-                    <TableHead className="text-white/50">Tx</TableHead>
-                    <TableHead className="text-white/50">Time</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="mono-label py-3 text-left font-normal text-white/35">
+                      Endpoint
+                    </th>
+                    <th className="mono-label py-3 text-left font-normal text-white/35">
+                      Payer
+                    </th>
+                    <th className="mono-label py-3 text-right font-normal text-white/35">
+                      Amount
+                    </th>
+                    <th className="mono-label py-3 text-left font-normal text-white/35">
+                      Tx
+                    </th>
+                    <th className="mono-label py-3 text-left font-normal text-white/35">
+                      Time
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
                   {payments.map((p) => (
-                    <TableRow key={p.id} className="border-white/5">
-                      <TableCell className="text-white">
+                    <tr key={p.id} className="border-b border-white/5">
+                      <td className="py-3.5 text-white">
                         {p.endpoints?.name ?? "?"}
-                      </TableCell>
-                      <TableCell className="text-white/50 text-xs">
+                      </td>
+                      <td className="py-3.5 font-mono text-xs text-white/50">
                         {p.payer_address.slice(0, 10)}...
-                      </TableCell>
-                      <TableCell className="text-right text-emerald-400">
+                      </td>
+                      <td className="py-3.5 text-right text-[#7CE38B] tabular-nums">
                         ${Number(p.amount_usdc).toFixed(4)}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="py-3.5">
                         {p.tx_hash ? (
                           <a
                             href={`https://explorer.arc.io/tx/${p.tx_hash}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-[#3B6DFF] hover:underline inline-flex items-center gap-1 text-xs"
+                            className="inline-flex items-center gap-1 font-mono text-xs text-[#3B6DFF] hover:underline"
                           >
                             {p.tx_hash.slice(0, 10)}...
                             <ExternalLink size={12} />
                           </a>
                         ) : (
-                          <span className="text-white/35 text-xs">pending</span>
+                          <span className="mono-label text-white/30">
+                            pending
+                          </span>
                         )}
-                      </TableCell>
-                      <TableCell className="text-white/35 text-xs">
+                      </td>
+                      <td className="py-3.5 font-mono text-xs text-white/35">
                         {new Date(p.created_at).toLocaleString("en-GB")}
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }
