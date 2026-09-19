@@ -109,9 +109,6 @@ export const marketplaceRouter = createRouter({
   recentPayments: publicQuery
     .input(z.object({ limit: z.number().min(1).max(100).default(25) }))
     .query(async ({ input }) => {
-      // Ticker feeds only on payments that carry an on-chain tx hash;
-      // trial-credit redemptions (tx_hash null) would otherwise mask the
-      // latest real settle.
       return sbSelect(
         "payments",
         `tx_hash=not.is.null&order=created_at.desc&limit=${input.limit}&select=id,payer_address,amount_usdc,tx_hash,status,created_at,endpoints(slug,name)`,
