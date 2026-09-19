@@ -2,6 +2,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { Fibres } from "@/components/Fibres";
 import LiveTxTicker from "@/components/LiveTxTicker";
 import { TrialCard } from "@/components/TrialCard";
+import { PayCallCard } from "@/components/PayCallCard";
 import { trpc } from "@/providers/trpc";
 import { ArrowUpRight, Copy, Check, Pause, Play } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -25,6 +26,12 @@ export default function Home() {
   const stats = trpc.marketplace.globalStats.useQuery();
   const [copied, setCopied] = useState<string | null>(null);
   const [playing, setPlaying] = useState(true);
+  const [paySlug, setPaySlug] = useState<string | null>(null);
+
+  const tryEndpoint = (slug: string) => {
+    setPaySlug(slug);
+    document.getElementById("try")?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -93,9 +100,10 @@ export default function Home() {
           </a>
         </div>
 
-        {/* First-login trial: zero-value signature -> $1 credit */}
-        <div className="mt-10">
+        {/* First-login trial + real paid call, no terminal needed */}
+        <div id="try" className="mt-10 grid gap-4 lg:grid-cols-2 scroll-mt-28">
           <TrialCard />
+          <PayCallCard slug={paySlug} onSlugChange={setPaySlug} />
         </div>
 
         {/* Live settle ticker: latest payment, click through to explorer */}
@@ -226,6 +234,12 @@ export default function Home() {
                   <span className="ml-1 text-xs text-white/35">/ call</span>
                 </span>
                 <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => tryEndpoint(e.slug)}
+                    className="mono-label whitespace-nowrap border border-[#3B6DFF]/40 px-2.5 py-1 text-[#3B6DFF] transition-colors hover:bg-[#3B6DFF] hover:text-white"
+                  >
+                    Pay &amp; call
+                  </button>
                   <code className="truncate border border-white/15 bg-white/[0.03] px-2.5 py-1 font-mono text-[11px] text-white/60">
                     /api/x402/{e.slug}
                   </code>
