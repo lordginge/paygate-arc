@@ -124,10 +124,18 @@ export default function Docs() {
             </p>
           </Panel>
 
-          <Panel n="03" title="Try the demo buyer">
+          <Panel n="03" title="Try it in your browser">
             <p>
-              The repo ships a buyer script that performs the full 402 flow
-              against any listed endpoint using a funded Arc wallet:
+              No terminal needed. On the home page, the{" "}
+              <span className="text-white">Pay &amp; call</span> card runs the
+              whole flow for you: connect a wallet with USDC on Arc, pick an
+              endpoint, sign one authorisation, and the response plus Arc
+              transaction link appear in place. The free trial next to it does
+              the same motion with credit, so no funds move.
+            </p>
+            <p>
+              Prefer code? The repo ships a buyer script that performs the full
+              402 flow against any listed endpoint using a funded Arc wallet:
             </p>
             <Code>{`BUYER_PRIVATE_KEY=0x... \\
 PAYGATE_URL=https://paygatex402.com \\
