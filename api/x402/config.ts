@@ -113,7 +113,9 @@ export function x402Configured(): { ok: boolean; missing: string[] } {
   const missing: string[] = [];
   if (!TREASURY_ADDRESS) missing.push("TREASURY_ADDRESS");
   if (!CIRCLE_API_KEY) missing.push("CIRCLE_API_KEY");
-  if (!SELLER_PRIVATE_KEY) missing.push("SELLER_PRIVATE_KEY");
+  // SELLER_PRIVATE_KEY is only needed when there is no Circle API key:
+  // Bearer auth replaces the seller-proof envelope entirely.
+  if (!CIRCLE_API_KEY && !SELLER_PRIVATE_KEY) missing.push("SELLER_PRIVATE_KEY");
   return { ok: missing.length === 0, missing };
 }
 
