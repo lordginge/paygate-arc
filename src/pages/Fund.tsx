@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AppKit } from "@circle-fin/app-kit";
+import { SiteHeader } from "@/components/SiteHeader";
+import { Fibres } from "@/components/Fibres";
 
 export default function Fund() {
   const [address, setAddress] = useState("");
@@ -54,8 +56,15 @@ export default function Fund() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-6 pt-32 pb-24">
-      <p className="mono-label text-white/40">FUND / YOUR WALLET</p>
+    <div className="min-h-screen text-white/90 antialiased">
+      <Fibres
+        playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches}
+      />
+      <div className="edge-fade-top" aria-hidden />
+      <div className="edge-fade-bottom" aria-hidden />
+      <SiteHeader />
+    <main className="relative mx-auto max-w-3xl px-6 pt-32 pb-24">
+      <p className="mono-label text-[#3B6DFF]">Fund / your wallet</p>
       <h1 className="m3-headline mt-4 text-4xl md:text-5xl">
         Put USDC on Arc.
         <br />
@@ -68,7 +77,7 @@ export default function Fund() {
         Bridge it in seconds over CCTP instead.
       </p>
 
-      <div className="mt-10 border border-white/10 bg-black/70 p-6">
+      <div className="mt-10 border border-white/10 bg-[#050505]/80 px-6 py-6 md:px-8">
         <p className="mono-label text-white/40">01 / DESTINATION WALLET</p>
         <input
           value={address}
@@ -96,7 +105,7 @@ export default function Fund() {
         )}
       </div>
 
-      <div className="mt-6 border border-white/10 bg-black/70 p-6">
+      <div className="mt-6 border border-white/10 bg-[#050505]/80 px-6 py-6 md:px-8">
         <p className="mono-label text-white/40">02 / FROM ANOTHER CHAIN</p>
         <p className="mt-4 text-sm leading-relaxed text-white/50">
           USDC sitting on Ethereum, Base, Solana or 24 other networks moves to
@@ -110,9 +119,10 @@ export default function Fund() {
           rel="noreferrer"
           className="link-line mono-label mt-4 inline-block text-white/70"
         >
-          BRIDGE DOCS →
+          Bridge docs →
         </a>
       </div>
     </main>
+    </div>
   );
 }
