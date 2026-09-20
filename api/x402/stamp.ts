@@ -1,8 +1,10 @@
 // PayGateStamp settle-hook.
 // After a fill settles (paid) or a trial credit redeems (custodial), write a
-// stamp to the PayGateStamp contract on Arc. Fire-and-forget: callers wrap
-// this in executionCtx.waitUntil, and every failure path only logs. A failed
-// stamp must never break a settled payment.
+// stamp to the PayGateStamp contract on Arc. The transaction is broadcast
+// inline (callers await sendStampFill before responding, ~1s) because a
+// Worker's background handle is not guaranteed to exist in every runtime;
+// only the slow receipt-wait is backgrounded. Every failure path only logs.
+// A failed stamp must never break a settled payment.
 
 import {
   createPublicClient,
@@ -81,16 +83,17 @@ export interface StampInput {
   buyerRef?: Hex;
 }
 
-export async function stampFill(input: StampInput): Promise<Hex> {
+// Broadcast the stamp and return the tx hash as soon as Arc accepts it.
+// Does NOT wait for inclusion; pair with waitForStamp in a background task.
+export async function sendStampFill(input: StampInput): Promise<Hex> {
   const pk = process.env.STAMP_PRIVATE_KEY;
   if (!pk) throw new Error("STAMP_PRIVATE_KEY not set");
 
   const account = privateKeyToAccount(pk as Hex);
   const transport = http(ARC.rpcUrls.default.http[0]);
   const wallet = createWalletClient({ account, chain: ARC, transport });
-  const pub = createPublicClient({ chain: ARC, transport });
 
-  const hash = await wallet.writeContract({
+  return wallet.writeContract({
     address: STAMP_CONTRACT,
     abi: STAMP_ABI,
     functionName: "stamp",
@@ -102,7 +105,16 @@ export async function stampFill(input: StampInput): Promise<Hex> {
       input.buyerRef ?? ZERO_BYTES32,
     ],
   });
-  // Wait for inclusion so a Worker freeze can't silently drop the stamp.
-  await pub.waitForTransactionReceipt({ hash, timeout: 15_000 });
-  return hash;
+}
+
+// Inclusion wait, safe to run in the background. Logs and swallows failures:
+// the stamp is already broadcast, this only confirms it landed.
+export async function waitForStamp(hash: Hex): Promise<void> {
+  try {
+    const transport = http(ARC.rpcUrls.default.http[0]);
+    const pub = createPublicClient({ chain: ARC, transport });
+    await pub.waitForTransactionReceipt({ hash, timeout: 15_000 });
+  } catch (e) {
+    console.error("stamp receipt wait failed:", e);
+  }
 }

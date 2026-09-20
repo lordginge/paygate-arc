@@ -102,8 +102,10 @@ export const FACILITATOR_BASE =
 // Platform treasury: receives USDC for marketplace sales in v1.
 // Per-seller payout addresses arrive in v2 once seller-side proof
 // delegation is built. Tracked per endpoint in Supabase meanwhile.
+// Fallback is hardcoded to the canonical treasury so a missing or stale
+// env var can never silently redirect funds to a dead address.
 export const TREASURY_ADDRESS = (process.env.TREASURY_ADDRESS ??
-  "") as `0x${string}`;
+  "0x57607f9296385571CbD8Df14D8728B7CB839743D") as `0x${string}`;
 
 export const CIRCLE_API_KEY = process.env.CIRCLE_API_KEY ?? "";
 export const SELLER_PRIVATE_KEY = (process.env.SELLER_PRIVATE_KEY ??
