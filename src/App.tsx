@@ -1,18 +1,15 @@
 import { Routes, Route } from 'react-router'
 import Home from './pages/Home'
-import Sell from './pages/Sell'
-import Dashboard from './pages/Dashboard'
-import Fund from './pages/Fund'
-import Docs from './pages/Docs'
+import Maintenance from './components/Maintenance'
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
-      <Route path="/sell" element={<Sell />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/docs" element={<Docs />} />
-        <Route path="/fund" element={<Fund />} />
+      <Route path="/sell" element={<Maintenance name="Sell" />} />
+      <Route path="/dashboard" element={<Maintenance name="Dashboard" />} />
+      <Route path="/docs" element={<Maintenance name="Docs" />} />
+      <Route path="/fund" element={<Maintenance name="Fund" />} />
     </Routes>
   )
 }

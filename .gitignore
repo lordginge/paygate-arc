@@ -40,3 +40,4 @@ build/
 coverage/
 .nyc_output/
 recovery/
+graphify-out/
