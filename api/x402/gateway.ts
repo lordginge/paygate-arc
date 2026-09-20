@@ -145,7 +145,7 @@ x402Gateway.all("/trial-voucher", async (c) => {
     wallet_address: wallet,
     credits_total: 1,
     credits_used: 0,
-    request_signature: sig.slice(0, 20) + "…",
+    request_signature: sig.slice(0, 20) + "\u2026",
   });
   return c.json({
     voucher: rows[0],
@@ -364,7 +364,14 @@ x402Gateway.all("/:slug", async (c) => {
       if (stampHash) {
         console.log("fill stamped:", stampHash);
         stampHeader = `tx:${stampHash}`;
-        c.executionCtx?.waitUntil(waitForStamp(stampHash));
+        // waitUntil throws synchronously in runtimes where executionCtx
+        // exists but isn't wired ("This context has no ExecutionContext").
+        // Isolate it so it can never clobber the success header.
+        try {
+          c.executionCtx?.waitUntil(waitForStamp(stampHash));
+        } catch {
+          console.log("waitUntil unavailable; stamp already broadcast");
+        }
       }
     }
   } catch (e) {
