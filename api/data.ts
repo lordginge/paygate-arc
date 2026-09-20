@@ -149,6 +149,17 @@ dataApi.all("/submit-request", async (c) => {
   });
 });
 
+// Stamp hook diagnostics: reveals only whether the runtime can see the
+// signing key, never the key itself. Used to verify deployments.
+dataApi.get("/arc/stamp-status", async (c) => {
+  const { stampConfigured, STAMP_CONTRACT } = await import("./x402/stamp");
+  return c.json({
+    configured: stampConfigured(),
+    contract: STAMP_CONTRACT,
+    chainId: 5042,
+  });
+});
+
 // Arc chain status, served over our dedicated Chainstack node.
 dataApi.get("/arc/status", async (c) => {
   try {
