@@ -326,10 +326,12 @@ x402Gateway.all("/:slug", async (c) => {
     status: trialMode ? "trial" : "settled",
   }).catch((e) => console.error("payment log failed:", e));
 
-  // Stamp the fill on the PayGateStamp contract (fire-and-forget; a stamp
-  // failure must never break a settled payment or a redeemed trial).
+  // Stamp the fill on the PayGateStamp contract. The broadcast is awaited
+  // inline (~1s) because this runtime's background handle is not guaranteed;
+  // only the receipt-wait is backgrounded. A stamp failure must never break
+  // a settled payment or a redeemed trial, so every path only logs.
   try {
-    const { stampConfigured, stampFill, termsHashFor, buyerRefFor } =
+    const { stampConfigured, sendStampFill, waitForStamp, termsHashFor, buyerRefFor } =
       await import("./stamp");
     if (stampConfigured()) {
       const termsHash = termsHashFor(
@@ -345,16 +347,20 @@ x402Gateway.all("/:slug", async (c) => {
       const buyerRef = trialMode
         ? buyerRefFor(payer)
         : ("0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`);
-      const stampPromise = stampFill({
+      const stampHash = await sendStampFill({
         paymentId,
         termsHash,
         buyer: payer,
         seller: payee.payTo,
         buyerRef,
-      })
-        .then((h) => console.log("fill stamped:", h))
-        .catch((e) => console.error("stamp failed:", e));
-      c.executionCtx?.waitUntil(stampPromise);
+      }).catch((e) => {
+        console.error("stamp broadcast failed:", e);
+        return null;
+      });
+      if (stampHash) {
+        console.log("fill stamped:", stampHash);
+        c.executionCtx?.waitUntil(waitForStamp(stampHash));
+      }
     }
   } catch (e) {
     console.error("stamp hook failed:", e);
