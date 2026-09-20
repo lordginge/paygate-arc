@@ -6,7 +6,7 @@
 export const ARC_CHAIN_ID = 5042;
 export const ARC_CHAIN_HEX = "0x" + ARC_CHAIN_ID.toString(16); // 0x13b2
 export const USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
-export const TREASURY_ADDRESS = "0x4da796f32391608237ad65017145b671d0d6e10a";
+export const TREASURY_ADDRESS = "0x57607f9296385571CbD8Df14D8728B7CB839743D";
 
 type Eip1193 = {
   request: (args: { method: string; params?: unknown[] | object }) => Promise<unknown>;
