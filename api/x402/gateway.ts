@@ -329,7 +329,10 @@ x402Gateway.all("/:slug", async (c) => {
   // Stamp the fill on the PayGateStamp contract. The broadcast is awaited
   // inline (~1s) because this runtime's background handle is not guaranteed;
   // only the receipt-wait is backgrounded. A stamp failure must never break
-  // a settled payment or a redeemed trial, so every path only logs.
+  // a settled payment or a redeemed trial. The outcome is surfaced in the
+  // X-PayGate-Stamp response header so deployments are verifiable without
+  // log access.
+  let stampHeader = "skipped:not-configured";
   try {
     const { stampConfigured, sendStampFill, waitForStamp, termsHashFor, buyerRefFor } =
       await import("./stamp");
@@ -355,15 +358,18 @@ x402Gateway.all("/:slug", async (c) => {
         buyerRef,
       }).catch((e) => {
         console.error("stamp broadcast failed:", e);
+        stampHeader = `error:${String((e as Error)?.message ?? e).slice(0, 120)}`;
         return null;
       });
       if (stampHash) {
         console.log("fill stamped:", stampHash);
+        stampHeader = `tx:${stampHash}`;
         c.executionCtx?.waitUntil(waitForStamp(stampHash));
       }
     }
   } catch (e) {
     console.error("stamp hook failed:", e);
+    stampHeader = `error:${String((e as Error)?.message ?? e).slice(0, 120)}`;
   }
 
   // Proxy the call to the seller's upstream API.
@@ -407,6 +413,7 @@ x402Gateway.all("/:slug", async (c) => {
   const responseHeaders = new Headers();
   const contentType = upstream.headers.get("content-type");
   if (contentType) responseHeaders.set("Content-Type", contentType);
+  responseHeaders.set("X-PayGate-Stamp", stampHeader);
   responseHeaders.set(
     "X-Payment-Receipt",
     JSON.stringify({
