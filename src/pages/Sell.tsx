@@ -39,7 +39,7 @@ const templates = [
   {
     label: "Proof of call",
     slug: "proof-of-call",
-    name: "Timestamped degen call",
+    name: "Timestamped proof of call",
     category: "social",
     upstreamUrl: "https://api.example.com/proof-of-call",
     price: "0.03",
