@@ -218,3 +218,83 @@ dataApi.get("/trial/balance/:wallet", async (c) => {
     balance_usdc: expired ? 0 : Number(v.credits_total) - Number(v.credits_used),
   });
 });
+
+// Real-time USDC transfer feed, read straight off Arc (no database).
+// The terminal polls this with ?after=<last block seen> and renders rows.
+const USDC = "0x3600000000000000000000000000000000000000";
+const TRANSFER_TOPIC =
+  "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const TREASURY = "0x57607f9296385571CbD8Df14D8728B7CB839743D";
+
+interface RpcLog {
+  blockNumber: string;
+  transactionHash: string;
+  topics: string[];
+  data: string;
+}
+
+dataApi.get("/arc/usdc-feed", async (c) => {
+  try {
+    const after = Number(c.req.query("after") ?? "0");
+    const latestHex = await arcRpc<string>("eth_blockNumber", []);
+    const latest = parseInt(latestHex, 16);
+    const fetchRange = (from: number, to: number) =>
+      arcRpc<RpcLog[]>("eth_getLogs", [
+        {
+          address: USDC,
+          topics: [TRANSFER_TOPIC],
+          fromBlock: "0x" + from.toString(16),
+          toBlock: "0x" + to.toString(16),
+        },
+      ]);
+    // Arc caps eth_getLogs at 10k blocks AND 20k results. Busy ranges
+    // fail with "retry with the range A-B"; honour the suggested bound
+    // instead of treating the error as an empty result.
+    const fetchSafe = async (from: number, to: number): Promise<RpcLog[]> => {
+      try {
+        return (await fetchRange(from, to)) ?? [];
+      } catch (e) {
+        const m = String(e).match(/retry with the range \d+-(\d+)/);
+        if (!m) throw e;
+        const clampTo = Math.min(to, parseInt(m[1], 10));
+        if (clampTo <= from) return [];
+        return (await fetchRange(from, clampTo)) ?? [];
+      }
+    };
+    let logs: RpcLog[] = [];
+    if (after > 0) {
+      // Incremental poll: cap the lookback so a long idle gap can't
+      // blow the result cap; the terminal is a live view, not an archive.
+      const from = Math.max(after + 1, latest - 1999);
+      if (from <= latest) logs = await fetchSafe(from, latest);
+    } else {
+      // First load: walk backwards until we have rows to show.
+      let hi = latest;
+      for (let i = 0; i < 40 && logs.length < 25 && hi > 0; i++) {
+        const lo = Math.max(0, hi - 1999);
+        const chunk = await fetchSafe(lo, hi);
+        logs = chunk.concat(logs);
+        hi = lo - 1;
+      }
+    }
+    const rows = (logs ?? [])
+      .filter((l) => l.topics.length >= 3)
+      .map((l) => {
+        const fromAddr = "0x" + l.topics[1].slice(26).toLowerCase();
+        const toAddr = "0x" + l.topics[2].slice(26).toLowerCase();
+        return {
+          block: parseInt(l.blockNumber, 16),
+          tx: l.transactionHash,
+          from: fromAddr,
+          to: toAddr,
+          usdc: Number(BigInt(l.data)) / 1e6,
+          paygate: fromAddr === TREASURY || toAddr === TREASURY,
+        };
+      })
+      .sort((a, b) => a.block - b.block)
+      .slice(-25);
+    return c.json({ latest, rows });
+  } catch (e) {
+    return c.json({ error: "rpc unavailable", detail: String(e) }, 502);
+  }
+});

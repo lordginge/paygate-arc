@@ -23,6 +23,7 @@ import {
   type PaymentRequirements,
 } from "./facilitator";
 import type { Payee } from "./proof";
+import { keccak256, toBytes } from "viem";
 
 interface EndpointRow {
   id: string;
@@ -324,6 +325,40 @@ x402Gateway.all("/:slug", async (c) => {
     network: "arc",
     status: trialMode ? "trial" : "settled",
   }).catch((e) => console.error("payment log failed:", e));
+
+  // Stamp the fill on the PayGateStamp contract (fire-and-forget; a stamp
+  // failure must never break a settled payment or a redeemed trial).
+  try {
+    const { stampConfigured, stampFill, termsHashFor, buyerRefFor } =
+      await import("./stamp");
+    if (stampConfigured()) {
+      const termsHash = termsHashFor(
+        slug,
+        String(endpoint.price_usdc),
+        payee.payTo,
+      );
+      const paymentId = (
+        trialMode
+          ? keccak256(toBytes(`trial:${slug}:${payer}:${trialTs}`))
+          : txHash
+      ) as `0x${string}`;
+      const buyerRef = trialMode
+        ? buyerRefFor(payer)
+        : ("0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`);
+      const stampPromise = stampFill({
+        paymentId,
+        termsHash,
+        buyer: payer,
+        seller: payee.payTo,
+        buyerRef,
+      })
+        .then((h) => console.log("fill stamped:", h))
+        .catch((e) => console.error("stamp failed:", e));
+      c.executionCtx?.waitUntil(stampPromise);
+    }
+  } catch (e) {
+    console.error("stamp hook failed:", e);
+  }
 
   // Proxy the call to the seller's upstream API.
   // Relative upstreams (first-party /api/data/* endpoints) are dispatched

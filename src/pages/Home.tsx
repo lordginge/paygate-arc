@@ -1,6 +1,6 @@
 import { SiteHeader } from "@/components/SiteHeader";
 import { Fibres } from "@/components/Fibres";
-import LiveTxTicker from "@/components/LiveTxTicker";
+import { TxTerminal } from "@/components/TxTerminal";
 import { TrialCard } from "@/components/TrialCard";
 import { trpc } from "@/providers/trpc";
 import { ArrowUpRight, Copy, Check, Pause, Play } from "lucide-react";
@@ -25,10 +25,6 @@ export default function Home() {
   const stats = trpc.marketplace.globalStats.useQuery();
   const [copied, setCopied] = useState<string | null>(null);
   const [playing, setPlaying] = useState(true);
-  const [proofAsset, setProofAsset] = useState("");
-  const [proofSide, setProofSide] = useState<"long" | "short">("long");
-  const [proofHours, setProofHours] = useState(24);
-  const [betaReceipt, setBetaReceipt] = useState<string>("");
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -42,26 +38,6 @@ export default function Home() {
   };
 
   const rows = (endpoints.data ?? []) as unknown as EndpointRow[];
-
-  async function makeBetaReceipt() {
-    const payload = {
-      asset: proofAsset.trim() || "0x0000000000000000000000000000000000000000",
-      side: proofSide,
-      thresholdBps: 2500,
-      expiresInHours: proofHours,
-      createdAt: new Date().toISOString(),
-      winnerPost: `Called it. +25% on ${proofAsset || "this CA"}. Timestamped on PayGate Proof of Call.`,
-      loserPost: `Took the L. -25% on ${proofAsset || "this CA"}. Timestamped on PayGate Proof of Call.`,
-    };
-    const buf = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(JSON.stringify(payload)),
-    );
-    const hash = Array.from(new Uint8Array(buf))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    setBetaReceipt(hash);
-  }
 
   return (
     <div className="min-h-screen text-white/90 antialiased">
@@ -103,7 +79,7 @@ export default function Home() {
         <p className="mt-8 max-w-xl text-[15px] leading-relaxed text-white/50">
           PayGate wraps any HTTP endpoint with an x402 paywall. Agents and
           developers pay per call in native USDC on Arc, settled in real time
-          by Circle&rsquo;s Facilitator Service. Every call pays. Every payment
+          by Circle's Facilitator Service. Every call pays. Every payment
           builds credit: seller float is supplied to Aave V4 as collateral,
           turning on-chain revenue into working capital.
         </p>
@@ -122,28 +98,26 @@ export default function Home() {
           <TrialCard />
         </div>
 
-        {/* Proof of call: degen scoreboard concept */}
+        {/* Built to the brief: what Circle and Arc are asking for */}
         <div className="m3e-frame mt-6 p-7">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <span className="mono-label text-[#3B6DFF]">Proof of call</span>
-            <span className="m3e-chip">1 post only</span>
+            <span className="mono-label text-[#3B6DFF]">Built to the brief</span>
+            <span className="m3e-chip">Arc mainnet · live</span>
           </div>
           <h2 className="m3-headline mt-4 text-2xl text-white">
-            So you think you’re degen?
+            What Circle and Arc are asking for. What we shipped.
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/45">
-            How to play: pick asset, entry, direction, expiry. Sign the call,
-            pay the x402 fee, lock the hash before the chart moves. Outcome:
-            +25% posts one winner card, -25% posts one loser card, between
-            bands is no blood. Only 3 scored calls per 24h move the board.
-            Timestamps do not care about feelings.
+            Arc is built for real deployments settling in native USDC, with
+            activity that can be audited rather than asserted. PayGate is one
+            of them.
           </p>
-          <div className="mt-6 grid gap-3 md:grid-cols-4">
+          <div className="mt-6 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             {[
-              ["Proof", "Hash, block time, wallet, entry price."],
-              ["Winner", "Blue card. One brag. Verify link included."],
-              ["Loser", "Red card. One L. No mystery deletes."],
-              ["Redemption", "Missed? Straight back into the next call."],
+              ["Mainnet, not testnet", "Live on Arc chain 5042 today, settling real USDC through Circle's Facilitator Service."],
+              ["Verified fills", "Verify-then-settle: payment is verified before the resource delivers, settled only after confirmation."],
+              ["Attribution on-chain", "Every settled fill is stamped to a contract on Arc, so credit accrues to the wallet that earned it."],
+              ["Auditable activity", "The terminal below reads USDC transfers straight off Arc RPC. Nothing is self-reported."],
             ].map(([t, d]) => (
               <div key={t} className="m3e-frame-soft p-4">
                 <p className="mono-label text-white/35">{t}</p>
@@ -151,75 +125,21 @@ export default function Home() {
               </div>
             ))}
           </div>
-
-          <div className="m3e-frame-soft mt-6 p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="mono-label text-white/40">Beta concept</p>
-              <span className="m3e-chip">local receipt · no live post</span>
-            </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-4">
-              <input
-                value={proofAsset}
-                onChange={(e) => setProofAsset(e.target.value)}
-                placeholder="Token CA, ticker shown later"
-                spellCheck={false}
-                className="m3e-input px-4 py-3 font-mono text-xs text-white placeholder:text-white/25 md:col-span-2"
-              />
-              <select
-                value={proofSide}
-                onChange={(e) => setProofSide(e.target.value as "long" | "short")}
-                className="m3e-input px-4 py-3 text-sm text-white"
-              >
-                <option value="long">Long</option>
-                <option value="short">Short</option>
-              </select>
-              <label className="m3e-input flex items-center gap-3 px-4 py-2">
-                <span className="mono-label text-white/35">{proofHours}h</span>
-                <input
-                  type="range"
-                  min="1"
-                  max="72"
-                  value={proofHours}
-                  onChange={(e) => setProofHours(Number(e.target.value))}
-                  className="m3e-slider"
-                  aria-label="Expiry hours"
-                />
-              </label>
-            </div>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <button onClick={makeBetaReceipt} className="btn-block !px-6 !py-3 text-[11px]">
-                GENERATE BETA RECEIPT
-              </button>
-              {betaReceipt && (
-                <code className="break-all font-mono text-xs text-[#B9CCFF]">
-                  beta:{betaReceipt.slice(0, 24)}…{betaReceipt.slice(-8)}
-                </code>
-              )}
-            </div>
-            <p className="mt-3 text-xs leading-relaxed text-white/30">
-              This only hashes the beta payload in your browser. It does not
-              pay, watch price, post, or write on-chain yet.
-            </p>
-          </div>
-          <p className="mt-5 text-xs leading-relaxed text-white/30">
-            Social posting needs a one-post consent permit. Points need the
-            proof-of-call ledger before they become real standings.
-          </p>
         </div>
 
-        {/* Live settle ticker: latest payment, click through to explorer */}
-        <div className="mt-10 inline-block">
-          <LiveTxTicker />
+        {/* Live terminal: real USDC transfers read straight off Arc */}
+        <div className="mt-10">
+          <TxTerminal />
         </div>
 
         {/* Stats strip */}
         <div className="mt-20 grid grid-cols-2 gap-3 md:grid-cols-4">
           {[
-            { label: "Live endpoints", value: stats.data?.endpointCount ?? "—" },
-            { label: "Payments settled", value: stats.data?.paymentCount ?? "—" },
+            { label: "Live endpoints", value: stats.data?.endpointCount ?? "\u2014" },
+            { label: "Payments settled", value: stats.data?.paymentCount ?? "\u2014" },
             {
               label: "Volume, USDC",
-              value: stats.data != null ? stats.data.volumeUsdc.toFixed(2) : "—",
+              value: stats.data != null ? stats.data.volumeUsdc.toFixed(2) : "\u2014",
             },
             { label: "Chain ID", value: "5042" },
           ].map((s, i) => (
