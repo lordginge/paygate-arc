@@ -1,10 +1,14 @@
-// Minimal Supabase REST client (PostgREST) using the publishable key.
-// RLS policies on the paygate-arc project gate what this key can do.
+// Minimal Supabase REST client (PostgREST). Server-side code uses the
+// service role key when present (SUPABASE_SERVICE_KEY, a Worker secret);
+// the publishable key is only a fallback. RLS policies gate the
+// publishable key to read-only on public tables.
 
 const SUPABASE_URL =
   process.env.SUPABASE_URL ?? "https://xdsgayetciytzopnzjab.supabase.co";
 const SUPABASE_KEY =
-  process.env.SUPABASE_KEY ?? "sb_publishable_X5xs9SvcCHuD3-KGpeBO_w_lre-Kp2E";
+  process.env.SUPABASE_SERVICE_KEY ??
+  process.env.SUPABASE_KEY ??
+  "sb_publishable_X5xs9SvcCHuD3-KGpeBO_w_lre-Kp2E";
 
 function headers(extra?: Record<string, string>) {
   return {
