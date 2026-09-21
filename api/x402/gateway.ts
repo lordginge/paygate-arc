@@ -166,6 +166,39 @@ const HOP_BY_HOP = new Set([
   "accept-encoding",
 ]);
 
+// ---- x402 payment-identifier extension -----------------------------------
+// Buyer-supplied idempotency key (spec: x402-foundation/x402,
+// packages/extensions/src/payment-identifier). We declare it on 402s so
+// aware clients attach an ID; replays of a settled ID with the same request
+// fingerprint are re-served without a second settle, and a replay with a
+// different fingerprint is refused with 409.
+const PAYMENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
+const PAYMENT_IDENTIFIER_DECLARATION = {
+  info: { required: false },
+  schema: {
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    type: "object",
+    properties: {
+      required: { type: "boolean" },
+      id: { type: "string", minLength: 16, maxLength: 128, pattern: "^[a-zA-Z0-9_-]+$" },
+    },
+    required: ["required"],
+  },
+} as const;
+
+function extractPaymentIdentifier(payload: unknown): string | null {
+  const info = (payload as { extensions?: Record<string, { info?: { id?: unknown } }> })
+    ?.extensions?.["payment-identifier"]?.info;
+  const id = info?.id;
+  if (typeof id !== "string") return null;
+  if (id.length < 16 || id.length > 128 || !PAYMENT_ID_PATTERN.test(id)) return null;
+  return id;
+}
+
+function payFingerprint(slug: string, amount: string, payTo: string): string {
+  return `${slug}:${amount}:${payTo.toLowerCase()}`;
+}
+
 x402Gateway.all("/:slug", async (c) => {
   const slug = c.req.param("slug");
 
@@ -220,6 +253,7 @@ x402Gateway.all("/:slug", async (c) => {
         mimeType: "application/json",
       },
       accepts: [requirements],
+      extensions: { "payment-identifier": PAYMENT_IDENTIFIER_DECLARATION },
     };
     const encoded = Buffer.from(JSON.stringify(paymentRequired)).toString(
       "base64",
@@ -236,6 +270,8 @@ x402Gateway.all("/:slug", async (c) => {
   let txHash = "";
   let payer = "";
   let trialMode = false;
+  let paymentIdentifier: string | null = null;
+  let dedupReplay = false;
 
   if (paymentHeader) {
     // ---- Paid request: settle then serve ----------------------------------
@@ -261,26 +297,72 @@ x402Gateway.all("/:slug", async (c) => {
       return c.json({ error: "Malformed Payment-Signature header" }, 400);
     }
 
-    const settled = await settlePayment(paymentPayload, requirements, payee);
-
-    txHash = settled.transaction ?? "";
-    payer = settled.payer ?? "";
-
-    if (!settled.success && settled.pending) {
-      const final = await pollStatus(
-        settled.pending.paymentId,
-        settled.pending.retryAfterMs,
-        payee,
-      );
-      if (final.status !== "completed") {
+    // payment-identifier dedup: a valid ID that already settled for this
+    // exact fingerprint is served from the record, no second settle. The
+    // lookup fails open (dedup inactive, payments unaffected) if the
+    // payment_ids table is not provisioned on this deployment.
+    paymentIdentifier = extractPaymentIdentifier(paymentPayload);
+    if (paymentIdentifier) {
+      const fingerprint = payFingerprint(slug, requirements.amount, payee.payTo);
+      const prior = await sbSelect<{
+        fingerprint: string;
+        tx_hash: string | null;
+        payer_address: string;
+      }>(
+        "payment_ids",
+        `id=eq.${encodeURIComponent(paymentIdentifier)}&select=fingerprint,tx_hash,payer_address`,
+      ).catch((e) => {
+        console.error("payment_ids lookup failed:", e);
+        return [] as { fingerprint: string; tx_hash: string | null; payer_address: string }[];
+      });
+      const record = prior[0];
+      if (record && record.fingerprint === fingerprint) {
+        dedupReplay = true;
+        txHash = record.tx_hash ?? "";
+        payer = record.payer_address ?? "";
+      } else if (record) {
         return c.json(
-          { error: "Payment settlement did not complete", status: final.status },
-          402,
+          {
+            error: "payment-identifier replayed with a different request fingerprint",
+            id: paymentIdentifier,
+          },
+          409,
         );
       }
-      txHash = final.transaction ?? "";
-    } else if (!settled.success) {
-      return c.json({ error: settled.error ?? "Settlement failed" }, 402);
+    }
+
+    if (!dedupReplay) {
+      const settled = await settlePayment(paymentPayload, requirements, payee);
+
+      txHash = settled.transaction ?? "";
+      payer = settled.payer ?? "";
+
+      if (!settled.success && settled.pending) {
+        const final = await pollStatus(
+          settled.pending.paymentId,
+          settled.pending.retryAfterMs,
+          payee,
+        );
+        if (final.status !== "completed") {
+          return c.json(
+            { error: "Payment settlement did not complete", status: final.status },
+            402,
+          );
+        }
+        txHash = final.transaction ?? "";
+      } else if (!settled.success) {
+        return c.json({ error: settled.error ?? "Settlement failed" }, 402);
+      }
+
+      if (paymentIdentifier) {
+        await sbInsert("payment_ids", {
+          id: paymentIdentifier,
+          fingerprint: payFingerprint(slug, requirements.amount, payee.payTo),
+          endpoint_id: endpoint.id,
+          payer_address: payer || "unknown",
+          tx_hash: txHash || null,
+        }).catch((e) => console.error("payment_ids insert failed:", e));
+      }
     }
   } else {
     // ---- Trial credit redemption ------------------------------------------
@@ -323,7 +405,7 @@ x402Gateway.all("/:slug", async (c) => {
     amount_usdc: endpoint.price_usdc,
     tx_hash: txHash || null,
     network: "arc",
-    status: trialMode ? "trial" : "settled",
+    status: trialMode ? "trial" : dedupReplay ? "dedup" : "settled",
   }).catch((e) => console.error("payment log failed:", e));
 
   // Stamp the fill on the PayGateStamp contract. The broadcast is awaited
@@ -333,7 +415,11 @@ x402Gateway.all("/:slug", async (c) => {
   // X-PayGate-Stamp response header so deployments are verifiable without
   // log access.
   let stampHeader = "skipped:not-configured";
-  try {
+  if (dedupReplay) {
+    // Replay of an already-stamped payment: the stamp from the original
+    // settle is the onchain record, so there is nothing new to stamp.
+    stampHeader = "skipped:dedup-replay";
+  } else try {
     const { stampConfigured, sendStampFill, waitForStamp, termsHashFor, buyerRefFor } =
       await import("./stamp");
     if (stampConfigured()) {
@@ -345,7 +431,9 @@ x402Gateway.all("/:slug", async (c) => {
       const paymentId = (
         trialMode
           ? keccak256(toBytes(`trial:${slug}:${payer}:${trialTs}`))
-          : txHash
+          : paymentIdentifier
+            ? keccak256(toBytes(`payid:${paymentIdentifier}`))
+            : txHash
       ) as `0x${string}`;
       const buyerRef = trialMode
         ? buyerRefFor(payer)
@@ -428,6 +516,8 @@ x402Gateway.all("/:slug", async (c) => {
       amount: requirements.amount,
       transaction: txHash,
       explorer: txHash ? `${ARC_EXPLORER}/tx/${txHash}` : null,
+      ...(paymentIdentifier ? { paymentIdentifier } : {}),
+      ...(dedupReplay ? { deduplicated: true } : {}),
     }),
   );
 
