@@ -5,6 +5,8 @@ import { appRouter } from "./router";
 import { createContext } from "./context";
 import { x402Gateway } from "./x402/gateway";
 import { dataApi } from "./data";
+import { verifyApi } from "./verify";
+import { statusApi } from "./status";
 import { onrampSessionHandler } from "./onramp";
 import { loadDotenv } from "./lib/dotenv-safe";
 
@@ -15,6 +17,8 @@ const app = new Hono();
 app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 app.route("/api/x402", x402Gateway);
 app.route("/api/data", dataApi);
+app.route("/api/verify", verifyApi);
+app.route("/api/status", statusApi);
 app.post("/api/onramp/sessions", (c) => onrampSessionHandler(c.req.raw));
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({
