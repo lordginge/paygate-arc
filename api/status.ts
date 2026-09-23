@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { arcRpc, x402Configured } from "./x402/config";
 import { sbSelect } from "./lib/supabase";
+import { indexerState } from "./lib/indexer";
 
 // Public status endpoint. Read-only checks against the real dependencies
 // (Arc RPC, Supabase, facilitator configuration). Cached briefly so the
@@ -64,6 +65,22 @@ statusApi.get("/", async (c) => {
     ok: true,
     detail: "challenge routes live (see page-level probe)",
   });
+
+  // On-chain indexer lag: how far the EIP-3009 sweep sits behind the head.
+  try {
+    const state = await indexerState();
+    const lag = Math.max(0, state.head - state.cursor);
+    checks.push({
+      name: "EIP-3009 indexer",
+      ok: state.cursor > 0,
+      detail:
+        lag === 0
+          ? "caught up to head"
+          : `backfilling, ${lag.toLocaleString()} blocks behind`,
+    });
+  } catch (e) {
+    checks.push({ name: "EIP-3009 indexer", ok: false, detail: (e as Error).message });
+  }
 
   const body = {
     generatedAt: new Date().toISOString(),

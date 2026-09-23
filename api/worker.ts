@@ -1,6 +1,7 @@
 // Cloudflare Workers entry: /api/* handled by the Hono app, everything else
 // served from static assets with SPA fallback (configured in wrangler.jsonc).
 import app from "./boot";
+import { advanceIndexer } from "./lib/indexer";
 
 interface Env {
   ASSETS: { fetch: (req: Request) => Promise<Response> };
@@ -29,5 +30,16 @@ export default {
       return r;
     }
     return res;
+  },
+  // On-chain EIP-3009 indexer: advances the Arc AuthorizationUsed sweep.
+  // Backfills in chunks until caught up, then tails the head. Idempotent.
+  async scheduled(
+    _event: unknown,
+    _env: Env,
+    ctx: { waitUntil: (p: Promise<unknown>) => void },
+  ): Promise<void> {
+    ctx.waitUntil(
+      advanceIndexer().catch((e) => console.error("indexer advance:", e)),
+    );
   },
 };
