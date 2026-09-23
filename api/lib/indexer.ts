@@ -14,8 +14,10 @@ import { sbSelect, sbUpsert } from "./supabase";
 // progress and never double-writes.
 
 const CURSOR_ID = "eip3009-arc";
-const SUBCHUNK = 50_000; // blocks per sub-chunk
-const MAX_SUBCHUNKS_PER_RUN = 6; // ~300k blocks per cron tick while backfilling
+// Arc RPC (Chainstack) caps eth_getLogs at a 10,000-block range, verified
+// live. Stay under it; the halving fallback below covers denser result caps.
+const SUBCHUNK = 10_000; // blocks per sub-chunk
+const MAX_SUBCHUNKS_PER_RUN = 10; // ~100k blocks per cron tick while backfilling
 const TIME_BUDGET_MS = 25_000; // stop before the scheduled-handler CPU limit
 const UPSERT_BATCH = 500;
 // Arc's USDC emits AuthorizationUsed(address indexed authorizer,
@@ -51,14 +53,21 @@ async function getLogs(
     ]);
     return logs ?? [];
   } catch (e) {
-    // Arc caps eth_getLogs by result count; honour the suggested bound.
-    const m = String(e).match(/retry with the range \d+-(\d+)/);
-    if (!m) throw e;
-    const clampTo = Math.min(to, parseInt(m[1], 10));
-    if (clampTo <= from) return [];
-    const first = await getLogs(from, clampTo, topic);
-    if (clampTo >= to) return first;
-    return first.concat(await getLogs(clampTo + 1, to, topic));
+    // Two caps exist: an explicit suggested bound ("retry with the range
+    // A-B") and a flat block-range limit ("Block range limit exceeded").
+    // Honour the bound if given, otherwise halve; scan both halves either
+    // way so no blocks are skipped.
+    const msg = String(e);
+    const m = msg.match(/retry with the range \d+-(\d+)/);
+    const rangeLimited = m || /block range limit exceeded/i.test(msg);
+    if (!rangeLimited) throw e;
+    const mid = m
+      ? Math.min(to, parseInt(m[1], 10))
+      : from + Math.floor((to - from) / 2);
+    if (mid <= from) return [];
+    const first = await getLogs(from, mid, topic);
+    if (mid >= to) return first;
+    return first.concat(await getLogs(mid + 1, to, topic));
   }
 }
 
