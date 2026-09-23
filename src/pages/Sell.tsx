@@ -347,7 +347,7 @@ export default function Sell() {
                   </div>
                   <p className="mt-4 text-xs leading-relaxed text-white/40">
                     Next: test one unpaid call for the 402, run one paid trial
-                    call, then set your upstream stop loss reminder at ${""}
+                    call, then set your upstream stop loss reminder at $
                     {stopLoss || "0"}/day so a viral buyer cannot surprise you.
                   </p>
                 </div>
