@@ -29,7 +29,17 @@ function shortAddr(a: string) {
   return `${a.slice(0, 8)}...${a.slice(-6)}`;
 }
 
+type IndexSummary = {
+  eip3009SettlementCount: number;
+  eip3009VolumeUsdc: number;
+  uniquePayers: number;
+  cursor: number;
+  head: number;
+  caughtUp: boolean;
+};
+
 export default function Verify() {
+  const [summary, setSummary] = useState<IndexSummary | null>(null);
   const [hash, setHash] = useState("");
   const [result, setResult] = useState<VerifyResult | null>(null);
   const [err, setErr] = useState("");
@@ -40,6 +50,10 @@ export default function Verify() {
     fetch("/api/verify/recent")
       .then((r) => (r.ok ? r.json() : { fills: [] }))
       .then((d) => setRecent(d.fills ?? []))
+      .catch(() => undefined);
+    fetch("/api/verify/summary")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setSummary(d as IndexSummary))
       .catch(() => undefined);
   }, []);
 
@@ -88,6 +102,25 @@ export default function Verify() {
           settlement, and show the gateway receipt that matches it. If we
           cannot corroborate something, we say so.
         </p>
+
+        {summary && (
+          <div className="m3e-frame-soft mt-8 grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
+            {[
+              [summary.eip3009SettlementCount.toLocaleString(), "EIP-3009 settlements indexed"],
+              [`$${summary.eip3009VolumeUsdc.toFixed(2)}`, "USDC volume, indexed"],
+              [summary.uniquePayers.toLocaleString(), "unique payers"],
+              [
+                summary.caughtUp ? "caught up" : `${(summary.head - summary.cursor).toLocaleString()} behind`,
+                "indexer lag",
+              ],
+            ].map(([v, l]) => (
+              <div key={l as string}>
+                <p className="text-lg font-medium text-white">{v}</p>
+                <p className="mt-1 text-[11px] text-white/35">{l}</p>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="m3e-frame mt-10 p-6">
           <label className="mono-label text-white/40">Transaction hash</label>
