@@ -40,6 +40,32 @@ function normSymbol(s: string): string {
 
 export const dataApi = new Hono();
 
+// Paywall-bypass guard: first-party paid upstreams must only be reachable
+// through the x402 gateway, after a successful settle. The gateway stamps an
+// internal key header on in-process dispatch; direct hits on /api/data/*
+// without it get a 404. Fails OPEN when INTERNAL_API_KEY is unset so legacy
+// deployments keep working until the secret is configured.
+const INTERNAL_KEY = process.env.INTERNAL_API_KEY ?? "";
+const PAID_UPSTREAM_PREFIXES = [
+  "/ticker/",
+  "/depth/",
+  "/signals/",
+  "/submit-request",
+  "/arc/rpc",
+  "/aave/rates",
+  "/guide/",
+];
+
+dataApi.use("*", async (c, next) => {
+  if (!INTERNAL_KEY) return next();
+  const path = c.req.path.replace(/^\/api\/data/, "");
+  if (!PAID_UPSTREAM_PREFIXES.some((p) => path.startsWith(p))) return next();
+  if (c.req.header("x-paygate-internal") !== INTERNAL_KEY) {
+    return c.json({ error: "Not Found" }, 404);
+  }
+  return next();
+});
+
 // 24h ticker stats (port of PerCall /ticker/:symbol, settled on Arc)
 dataApi.get("/ticker/:symbol", async (c) => {
   try {
@@ -376,4 +402,34 @@ dataApi.get("/arc/usdc-feed", async (c) => {
   } catch (e) {
     return c.json({ error: "rpc unavailable", detail: String(e) }, 502);
   }
+});
+
+// The 8-part builder guide: build your own x402 resource server on Arc,
+// wallet, stamping, and all. Each part is its own paid marketplace endpoint,
+// so reading the guide dogfoods the protocol it teaches.
+dataApi.get("/guide/:part", async (c) => {
+  const part = Number(c.req.param("part"));
+  const { getGuidePart, GUIDE_PARTS } = await import("./x402/guide");
+  const entry = getGuidePart(part);
+  if (!entry) {
+    return c.json(
+      {
+        error: "unknown guide part",
+        parts: GUIDE_PARTS.map((p) => ({
+          part: p.part,
+          slug: p.slug,
+          title: p.title,
+        })),
+      },
+      404,
+    );
+  }
+  return c.json({
+    part: entry.part,
+    slug: entry.slug,
+    title: entry.title,
+    format: "markdown",
+    body: entry.body,
+    total_parts: GUIDE_PARTS.length,
+  });
 });

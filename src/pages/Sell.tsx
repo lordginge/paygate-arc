@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
+import { connectArc } from "@/lib/trial";
+import { signWalletProof } from "@/lib/proof";
 
 const templates = [
   {
@@ -71,6 +73,19 @@ export default function Sell() {
     onError: (e) => setMsg(`Error: ${e.message}`),
   });
 
+  // Registration proves wallet ownership: connect, then the wallet signs a
+  // short challenge. The typed address and the connected account must match.
+  async function registerWithProof() {
+    try {
+      const account = await connectArc();
+      setWallet(account);
+      const proof = await signWalletProof("register-seller", account);
+      registerSeller.mutate({ walletAddress: account, displayName, ...proof });
+    } catch (e) {
+      setMsg(`Error: ${(e as Error).message}`);
+    }
+  }
+
   const utils = trpc.useUtils();
   const createEndpoint = trpc.marketplace.createEndpoint.useMutation({
     onSuccess: (row) => {
@@ -92,6 +107,26 @@ export default function Sell() {
     setPrice(t.price);
     setDescription(t.description);
     setMsg(`Template loaded: ${t.label}. Replace the upstream URL with yours.`);
+  }
+
+  async function publishWithProof() {
+    try {
+      const account = await connectArc();
+      setWallet(account);
+      const proof = await signWalletProof("create-endpoint", account);
+      createEndpoint.mutate({
+        walletAddress: account,
+        slug,
+        name,
+        description,
+        category,
+        upstreamUrl,
+        priceUsdc: Number(price),
+        ...proof,
+      });
+    } catch (e) {
+      setMsg(`Error: ${(e as Error).message}`);
+    }
   }
 
   return (
@@ -164,9 +199,7 @@ export default function Sell() {
               <Button
                 className="btn-block w-full"
                 disabled={registerSeller.isPending || !wallet || !displayName}
-                onClick={() =>
-                  registerSeller.mutate({ walletAddress: wallet, displayName })
-                }
+                onClick={() => void registerWithProof()}
               >
                 {sellerReady ? "REGISTERED" : "REGISTER SELLER"}
               </Button>
@@ -281,17 +314,7 @@ export default function Sell() {
                   !name ||
                   !upstreamUrl.startsWith("https://")
                 }
-                onClick={() =>
-                  createEndpoint.mutate({
-                    walletAddress: wallet,
-                    slug,
-                    name,
-                    description,
-                    category,
-                    upstreamUrl,
-                    priceUsdc: Number(price),
-                  })
-                }
+                onClick={() => void publishWithProof()}
               >
                 PUBLISH THE CALL
               </Button>

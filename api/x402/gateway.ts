@@ -332,7 +332,7 @@ x402Gateway.all("/:slug", async (c) => {
     }
 
     if (!dedupReplay) {
-      const settled = await settlePayment(paymentPayload, requirements, payee);
+      const settled = await settlePayment(paymentPayload, requirements, payee, paymentIdentifier);
 
       txHash = settled.transaction ?? "";
       payer = settled.payer ?? "";
@@ -415,7 +415,12 @@ x402Gateway.all("/:slug", async (c) => {
   // X-PayGate-Stamp response header so deployments are verifiable without
   // log access.
   let stampHeader = "skipped:not-configured";
-  if (dedupReplay) {
+  if (trialMode) {
+    // Trial redemptions move no real money and are farmable across fresh
+    // wallets. Stamping every redemption would burn stamper gas on spam, so
+    // trial fills are intentionally not stamped. Paid fills always stamp.
+    stampHeader = "skipped:trial";
+  } else if (dedupReplay) {
     // Replay of an already-stamped payment: the stamp from the original
     // settle is the onchain record, so there is nothing new to stamp.
     stampHeader = "skipped:dedup-replay";
@@ -478,6 +483,12 @@ x402Gateway.all("/:slug", async (c) => {
   // Payment provenance for upstream handlers (settle already succeeded here).
   fwdHeaders.set("x-payer-address", payer || "unknown");
   if (txHash) fwdHeaders.set("x-payment-tx", txHash);
+  // Internal dispatch key: never forward a client-supplied value, always
+  // set our own so first-party paid upstreams can tell gateway traffic
+  // from direct /api/data/* hits (paywall-bypass guard in data.ts).
+  fwdHeaders.delete("x-paygate-internal");
+  const internalKey = process.env.INTERNAL_API_KEY ?? "";
+  if (internalKey) fwdHeaders.set("x-paygate-internal", internalKey);
 
   const hasBody = !["GET", "HEAD"].includes(c.req.method);
 
