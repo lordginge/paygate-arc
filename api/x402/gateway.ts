@@ -478,6 +478,12 @@ x402Gateway.all("/:slug", async (c) => {
   // Payment provenance for upstream handlers (settle already succeeded here).
   fwdHeaders.set("x-payer-address", payer || "unknown");
   if (txHash) fwdHeaders.set("x-payment-tx", txHash);
+  // Internal dispatch key: never forward a client-supplied value, always
+  // set our own so first-party paid upstreams can tell gateway traffic
+  // from direct /api/data/* hits (paywall-bypass guard in data.ts).
+  fwdHeaders.delete("x-paygate-internal");
+  const internalKey = process.env.INTERNAL_API_KEY ?? "";
+  if (internalKey) fwdHeaders.set("x-paygate-internal", internalKey);
 
   const hasBody = !["GET", "HEAD"].includes(c.req.method);
 
