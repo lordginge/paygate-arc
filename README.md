@@ -1,8 +1,15 @@
-# PayGate
+# PayGate — turn API calls into collateral
 
-Pay-per-call API marketplace: wrap any HTTP API with an **x402 paywall** and get paid in **USDC on Arc mainnet**, settled by Circle's Facilitator Service.
+**Pay-per-call API marketplace on Arc.** Wrap any HTTP endpoint with an x402 paywall and get paid in native USDC on Arc mainnet, settled in real time by Circle's Facilitator Service. Every settled call is stamped on-chain — and seller float can be supplied to Aave V4 as collateral, turning payment history into working capital.
 
-Built for the [Arc Microgrants](https://dorahacks.io/hackathon/arc-microgrants/detail) programme.
+**Live:** paygatex402.com — 16 endpoints, 126+ payments settled on Arc mainnet, auditable on-chain.
+
+## The problem
+
+x402 gave AI agents a way to pay per call — but API sellers still have to assemble the entire merchant stack themselves: the 402 challenge, EIP-3009 verification, facilitator settlement, receipts, an earnings ledger. And once revenue arrives as micropayments, it's dead capital — too small and irregular to borrow against.
+
+PayGate is the missing merchant layer for Arc. Sellers point it at any HTTPS endpoint and set a USDC price. Buyers get a correct x402 v2 challenge, sign with EIP-3009, and Circle's Facilitator settles on-chain in under a second. Sellers track earnings on a dashboard, and their payment history is stamped to a contract — the seed of a credit line, not just a payout.
+
 
 ## What it does
 
