@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createRouter, publicQuery } from "./middleware";
 import { sbSelect, sbInsert, sbUpsert } from "./lib/supabase";
+import { verifyWalletProof } from "./lib/authz";
 import { ARC_NETWORK, x402Configured, TREASURY_ADDRESS } from "./x402/config";
 import {
   walletsReady,
@@ -11,6 +12,15 @@ import {
 
 const walletRe = /^0x[a-fA-F0-9]{40}$/;
 const slugRe = /^[a-z0-9][a-z0-9-]{1,60}$/;
+
+// Every mutating procedure requires a wallet-ownership proof: a personal_sign
+// of "paygate-<action>:<address>:<ts>" made by the same address, verified
+// server-side with a 5-minute window. Stops name-squatting, endpoint forgery
+// and forced withdrawals by anyone who merely knows an address.
+const proofInput = {
+  signature: z.string().startsWith("0x"),
+  ts: z.number().int().positive(),
+};
 
 export const marketplaceRouter = createRouter({
   listEndpoints: publicQuery.query(async () => {
@@ -35,9 +45,11 @@ export const marketplaceRouter = createRouter({
       z.object({
         walletAddress: z.string().regex(walletRe, "Invalid EVM address"),
         displayName: z.string().min(1).max(80),
+        ...proofInput,
       }),
     )
     .mutation(async ({ input }) => {
+      await verifyWalletProof("register-seller", input.walletAddress, input.signature, input.ts);
       const walletAddress = input.walletAddress.toLowerCase();
       const existing = await sbSelect<{
         id: string;
@@ -84,9 +96,11 @@ export const marketplaceRouter = createRouter({
         category: z.string().max(40).default("general"),
         upstreamUrl: z.string().url().startsWith("https://"),
         priceUsdc: z.number().positive().max(100),
+        ...proofInput,
       }),
     )
     .mutation(async ({ input }) => {
+      await verifyWalletProof("create-endpoint", input.walletAddress, input.signature, input.ts);
       const sellers = await sbSelect<{ id: string }>(
         "sellers",
         `wallet_address=eq.${input.walletAddress.toLowerCase()}&select=id`,
@@ -160,8 +174,9 @@ export const marketplaceRouter = createRouter({
     }),
 
   withdraw: publicQuery
-    .input(z.object({ walletAddress: z.string().regex(walletRe) }))
+    .input(z.object({ walletAddress: z.string().regex(walletRe), ...proofInput }))
     .mutation(async ({ input }) => {
+      await verifyWalletProof("withdraw", input.walletAddress, input.signature, input.ts);
       const sellers = await sbSelect<{
         id: string;
         wallet_address: string;

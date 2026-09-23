@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { ExternalLink } from "lucide-react";
 import { useState } from "react";
+import { signWalletProof } from "@/lib/proof";
 
 interface PaymentRow {
   id: string;
@@ -37,6 +38,19 @@ export default function Dashboard() {
   const withdraw = trpc.marketplace.withdraw.useMutation({
     onSuccess: () => utils.marketplace.sellerStats.invalidate(),
   });
+
+  // Withdrawal proves ownership: the connected wallet signs the challenge
+  // for the address being withdrawn from, so nobody can force a payout.
+  const [withdrawErr, setWithdrawErr] = useState<string | null>(null);
+  async function withdrawWithProof() {
+    try {
+      setWithdrawErr(null);
+      const proof = await signWalletProof("withdraw", submitted);
+      withdraw.mutate({ walletAddress: submitted, ...proof });
+    } catch (e) {
+      setWithdrawErr((e as Error).message);
+    }
+  }
 
   const payments = (feed.data ?? []) as unknown as PaymentRow[];
   const paidCalls = stats.data?.payments.length ?? 0;
@@ -122,7 +136,7 @@ export default function Dashboard() {
                       !stats.data.payoutBalance ||
                       stats.data.payoutBalance <= 0
                     }
-                    onClick={() => withdraw.mutate({ walletAddress: submitted })}
+                    onClick={() => void withdrawWithProof()}
                   >
                     {withdraw.isPending ? "WITHDRAWING..." : "WITHDRAW"}
                   </Button>
@@ -136,6 +150,11 @@ export default function Dashboard() {
                 {withdraw.error && (
                   <CardContent className="pt-0 text-xs text-red-400">
                     {withdraw.error.message}
+                  </CardContent>
+                )}
+                {withdrawErr && (
+                  <CardContent className="pt-0 text-xs text-red-400">
+                    {withdrawErr}
                   </CardContent>
                 )}
               </Card>

@@ -65,6 +65,10 @@ export async function settlePayment(
   paymentPayload: unknown,
   paymentRequirements: PaymentRequirements,
   payee: Payee,
+  // Reuse the buyer's payment-identifier when one was supplied so Circle-side
+  // idempotency sees a stable key across retries; only generate a fresh id
+  // for buyers who did not send one.
+  buyerPaymentId: string | null = null,
 ): Promise<SettleResult> {
   const body = {
     x402Version: 2,
@@ -72,7 +76,7 @@ export async function settlePayment(
       ...(paymentPayload as Record<string, unknown>),
       extensions: {
         "payment-identifier": {
-          info: { required: true, id: makePaymentId() },
+          info: { required: true, id: buyerPaymentId ?? makePaymentId() },
         },
       },
     },

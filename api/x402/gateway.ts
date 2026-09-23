@@ -332,7 +332,7 @@ x402Gateway.all("/:slug", async (c) => {
     }
 
     if (!dedupReplay) {
-      const settled = await settlePayment(paymentPayload, requirements, payee);
+      const settled = await settlePayment(paymentPayload, requirements, payee, paymentIdentifier);
 
       txHash = settled.transaction ?? "";
       payer = settled.payer ?? "";
@@ -415,7 +415,12 @@ x402Gateway.all("/:slug", async (c) => {
   // X-PayGate-Stamp response header so deployments are verifiable without
   // log access.
   let stampHeader = "skipped:not-configured";
-  if (dedupReplay) {
+  if (trialMode) {
+    // Trial redemptions move no real money and are farmable across fresh
+    // wallets. Stamping every redemption would burn stamper gas on spam, so
+    // trial fills are intentionally not stamped. Paid fills always stamp.
+    stampHeader = "skipped:trial";
+  } else if (dedupReplay) {
     // Replay of an already-stamped payment: the stamp from the original
     // settle is the onchain record, so there is nothing new to stamp.
     stampHeader = "skipped:dedup-replay";
