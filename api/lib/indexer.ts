@@ -4,12 +4,20 @@ import { sbSelect, sbUpsert } from "./supabase";
 
 // On-chain EIP-3009 indexer for Arc. Scans AuthorizationUsed events on the
 // native USDC contract, pairs each with the USDC Transfer in the same
-// transaction, attributes matches against the PayGate payment ledger, and
-// stores a resumable cursor. Runs from the Worker cron; everything is
-// idempotent (upserts keyed by tx_hash + log_index) so reruns are safe.
+// transaction (fetched as a second getLogs window, not per-tx receipts),
+// attributes matches against the PayGate payment ledger, and stores a
+// resumable cursor. Runs from the Worker cron; everything is idempotent
+// (upserts keyed by tx_hash + log_index) so reruns are safe.
+//
+// Cron CPU time is the hard constraint, so work is done in sub-chunks and
+// the cursor is persisted after every sub-chunk: a killed run never loses
+// progress and never double-writes.
 
 const CURSOR_ID = "eip3009-arc";
-const CHUNK = 200_000; // blocks per run while catching up
+const SUBCHUNK = 50_000; // blocks per sub-chunk
+const MAX_SUBCHUNKS_PER_RUN = 6; // ~300k blocks per cron tick while backfilling
+const TIME_BUDGET_MS = 25_000; // stop before the scheduled-handler CPU limit
+const UPSERT_BATCH = 500;
 // Arc's USDC emits AuthorizationUsed(address indexed authorizer,
 // bytes32 indexed nonce) — verified against live settle transactions
 // (e.g. block 21893689). Not the older AuthorizationUsed(bytes32) form.
@@ -27,17 +35,16 @@ type RpcLog = {
   logIndex: string;
 };
 
-type RpcReceipt = {
-  transactionHash: string;
-  logs: RpcLog[];
-};
-
-async function getLogs(from: number, to: number): Promise<RpcLog[]> {
+async function getLogs(
+  from: number,
+  to: number,
+  topic: string,
+): Promise<RpcLog[]> {
   try {
     const logs = await arcRpc<RpcLog[] | null>("eth_getLogs", [
       {
         address: USDC_ADDRESS,
-        topics: [AUTHORIZATION_USED_TOPIC],
+        topics: [topic],
         fromBlock: "0x" + from.toString(16),
         toBlock: "0x" + to.toString(16),
       },
@@ -49,7 +56,9 @@ async function getLogs(from: number, to: number): Promise<RpcLog[]> {
     if (!m) throw e;
     const clampTo = Math.min(to, parseInt(m[1], 10));
     if (clampTo <= from) return [];
-    return getLogs(from, clampTo);
+    const first = await getLogs(from, clampTo, topic);
+    if (clampTo >= to) return first;
+    return first.concat(await getLogs(clampTo + 1, to, topic));
   }
 }
 
@@ -69,88 +78,106 @@ async function writeCursor(last: number): Promise<void> {
   await sbUpsert("indexer_cursor", { id: CURSOR_ID, last_block: last }, "id");
 }
 
+// Largest USDC Transfer per transaction hash for a block window.
+function largestTransfersByTx(transferLogs: RpcLog[]): Map<string, RpcLog> {
+  const byTx = new Map<string, RpcLog>();
+  for (const l of transferLogs) {
+    const cur = byTx.get(l.transactionHash);
+    if (!cur || BigInt(l.data) > BigInt(cur.data)) byTx.set(l.transactionHash, l);
+  }
+  return byTx;
+}
+
+// Batch attribution: tx_hash -> endpoint slug for hashes present in the
+// payment ledger. Fails soft to empty map.
+async function attributeHashes(
+  hashes: string[],
+): Promise<Map<string, string | null>> {
+  const out = new Map<string, string | null>();
+  if (hashes.length === 0) return out;
+  try {
+    const ledger = await sbSelect<{ tx_hash: string; endpoint_id: string }>(
+      "payment_ids",
+      `tx_hash=in.(${hashes.join(",")})&select=tx_hash,endpoint_id`,
+    );
+    if (ledger.length === 0) return out;
+    const epIds = [...new Set(ledger.map((r) => r.endpoint_id))];
+    const eps = await sbSelect<{ id: string; slug: string }>(
+      "endpoints",
+      `id=in.(${epIds.join(",")})&select=id,slug`,
+    );
+    const slugById = new Map(eps.map((e) => [e.id, e.slug]));
+    for (const r of ledger) {
+      out.set(r.tx_hash, slugById.get(r.endpoint_id) ?? null);
+    }
+  } catch {
+    // attribution fails soft; on-chain rows still land
+  }
+  return out;
+}
+
 export async function advanceIndexer(): Promise<{
   from: number;
   to: number;
   events: number;
   caughtUp: boolean;
 }> {
+  const started = Date.now();
   const headHex = await arcRpc<string>("eth_blockNumber", []);
   const head = Number(BigInt(headHex));
-  const last = await readCursor();
-  const from = last + 1;
-  const to = Math.min(head, last + CHUNK);
-  if (from > head) {
-    return { from, to: head, events: 0, caughtUp: true };
-  }
+  let last = await readCursor();
+  const runFrom = last + 1;
+  let events = 0;
 
-  const authLogs = await getLogs(from, to);
+  for (let i = 0; i < MAX_SUBCHUNKS_PER_RUN; i++) {
+    const from = last + 1;
+    if (from > head) break;
+    const to = Math.min(head, last + SUBCHUNK);
 
-  for (const log of authLogs) {
-    const receipt = await arcRpc<RpcReceipt | null>(
-      "eth_getTransactionReceipt",
-      [log.transactionHash],
-    ).catch(() => null);
-    if (!receipt) continue;
+    const [authLogs, transferLogs] = await Promise.all([
+      getLogs(from, to, AUTHORIZATION_USED_TOPIC),
+      getLogs(from, to, TRANSFER_TOPIC),
+    ]);
 
-    const transfers = receipt.logs.filter(
-      (l) =>
-        l.address.toLowerCase() === USDC_ADDRESS.toLowerCase() &&
-        l.topics[0]?.toLowerCase() === TRANSFER_TOPIC.toLowerCase(),
-    );
-    // The settlement transfer is the largest USDC movement in the tx
-    // (facilitator and fee legs, if any, are smaller or absent).
-    const main = transfers.sort(
-      (a, b) => Number(BigInt(b.data) - BigInt(a.data)),
-    )[0];
+    if (authLogs.length > 0) {
+      const transferByTx = largestTransfersByTx(transferLogs);
+      const hashes = [...new Set(authLogs.map((l) => l.transactionHash.toLowerCase()))];
+      const slugByTx = await attributeHashes(hashes);
 
-    // Authorizer (payer) is topic1 of the AuthorizationUsed event itself;
-    // the Transfer pairing supplies payee and amount.
-    const payer = `0x${log.topics[1].slice(26).toLowerCase()}`;
-    const payee = main ? `0x${main.topics[2].slice(26).toLowerCase()}` : null;
-    const valueUsdc = main
-      ? Number(BigInt(main.data)) / 10 ** USDC_DECIMALS
-      : null;
+      const rows = authLogs.map((log) => {
+        const main = transferByTx.get(log.transactionHash);
+        return {
+          tx_hash: log.transactionHash.toLowerCase(),
+          log_index: Number(BigInt(log.logIndex)),
+          block_number: Number(BigInt(log.blockNumber)),
+          nonce: log.topics[2],
+          // Authorizer (payer) is topic1 of AuthorizationUsed; the paired
+          // Transfer supplies payee and amount.
+          payer: `0x${log.topics[1].slice(26).toLowerCase()}`,
+          payee: main ? `0x${main.topics[2].slice(26).toLowerCase()}` : null,
+          value_usdc: main ? Number(BigInt(main.data)) / 10 ** USDC_DECIMALS : null,
+          endpoint_slug: slugByTx.get(log.transactionHash.toLowerCase()) ?? null,
+          attributed: slugByTx.has(log.transactionHash.toLowerCase()),
+        };
+      });
 
-    // Attribution: match against the payment ledger by tx hash.
-    let slug: string | null = null;
-    let attributed = false;
-    try {
-      const ledger = await sbSelect<{ endpoint_id: string }>(
-        "payment_ids",
-        `tx_hash=eq.${log.transactionHash.toLowerCase()}&select=endpoint_id&limit=1`,
-      );
-      if (ledger[0]) {
-        const eps = await sbSelect<{ id: string; slug: string }>(
-          "endpoints",
-          `id=eq.${ledger[0].endpoint_id}&select=id,slug`,
+      for (let b = 0; b < rows.length; b += UPSERT_BATCH) {
+        await sbUpsert(
+          "eip3009_events",
+          rows.slice(b, b + UPSERT_BATCH),
+          "tx_hash,log_index",
         );
-        slug = eps[0]?.slug ?? null;
-        attributed = true;
       }
-    } catch {
-      // attribution fails soft; the on-chain row still lands
+      events += authLogs.length;
     }
 
-    await sbUpsert(
-      "eip3009_events",
-      {
-        tx_hash: log.transactionHash.toLowerCase(),
-        log_index: Number(BigInt(log.logIndex)),
-        block_number: Number(BigInt(log.blockNumber)),
-        nonce: log.topics[2],
-        payer,
-        payee,
-        value_usdc: valueUsdc,
-        endpoint_slug: slug,
-        attributed,
-      },
-      "tx_hash,log_index",
-    );
+    await writeCursor(to);
+    last = to;
+
+    if (to >= head || Date.now() - started > TIME_BUDGET_MS) break;
   }
 
-  await writeCursor(to);
-  return { from, to, events: authLogs.length, caughtUp: to >= head };
+  return { from: runFrom, to: last, events, caughtUp: last >= head };
 }
 
 export async function indexerState(): Promise<{
