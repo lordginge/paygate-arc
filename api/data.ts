@@ -377,3 +377,33 @@ dataApi.get("/arc/usdc-feed", async (c) => {
     return c.json({ error: "rpc unavailable", detail: String(e) }, 502);
   }
 });
+
+// The 8-part builder guide: build your own x402 resource server on Arc,
+// wallet, stamping, and all. Each part is its own paid marketplace endpoint,
+// so reading the guide dogfoods the protocol it teaches.
+dataApi.get("/guide/:part", async (c) => {
+  const part = Number(c.req.param("part"));
+  const { getGuidePart, GUIDE_PARTS } = await import("./x402/guide");
+  const entry = getGuidePart(part);
+  if (!entry) {
+    return c.json(
+      {
+        error: "unknown guide part",
+        parts: GUIDE_PARTS.map((p) => ({
+          part: p.part,
+          slug: p.slug,
+          title: p.title,
+        })),
+      },
+      404,
+    );
+  }
+  return c.json({
+    part: entry.part,
+    slug: entry.slug,
+    title: entry.title,
+    format: "markdown",
+    body: entry.body,
+    total_parts: GUIDE_PARTS.length,
+  });
+});
