@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { keccak256, toBytes } from "viem";
 import { arcRpc, USDC_ADDRESS, USDC_DECIMALS, ARC_EXPLORER } from "./x402/config";
 import { sbSelect } from "./lib/supabase";
+import { indexerState } from "./lib/indexer";
 
 // Public, read-only payment verification. Anyone can paste an Arc tx hash
 // and see the on-chain USDC transfer, whether it was an EIP-3009
@@ -10,9 +11,12 @@ import { sbSelect } from "./lib/supabase";
 // gateway ledger.
 
 const TRANSFER_TOPIC = keccak256(toBytes("Transfer(address,address,uint256)"));
-const AUTHORIZATION_USED_TOPIC = keccak256(
-  toBytes("AuthorizationUsed(bytes32)"),
-);
+// Arc USDC emits AuthorizationUsed(address,bytes32); keep the older
+// bytes32-only form too so verification works on both variants.
+const AUTHORIZATION_USED_TOPICS = [
+  keccak256(toBytes("AuthorizationUsed(address,bytes32)")),
+  keccak256(toBytes("AuthorizationUsed(bytes32)")),
+];
 
 type RpcLog = {
   address: string;
@@ -40,6 +44,36 @@ function decodeTransfer(log: RpcLog) {
 }
 
 export const verifyApi = new Hono();
+
+// On-chain EIP-3009 index summary for Arc. Numbers come from the indexed
+// AuthorizationUsed events, not from our own gateway, so they cover every
+// EIP-3009 settlement on Arc the sweep has reached. cursor/head let any
+// reader see how far behind the sweep is.
+verifyApi.get("/summary", async (c) => {
+  try {
+    const [state, events] = await Promise.all([
+      indexerState(),
+      sbSelect<{ value_usdc: number | null; payer: string | null }>(
+        "eip3009_events",
+        "select=value_usdc,payer",
+      ).catch(() => [] as { value_usdc: number | null; payer: string | null }[]),
+    ]);
+    const volume = events.reduce((s, e) => s + (Number(e.value_usdc) || 0), 0);
+    const payers = new Set(events.map((e) => e.payer).filter(Boolean));
+    return c.json({
+      chain: "eip155:5042",
+      usdc: USDC_ADDRESS,
+      eip3009SettlementCount: events.length,
+      eip3009VolumeUsdc: Number(volume.toFixed(6)),
+      uniquePayers: payers.size,
+      cursor: state.cursor,
+      head: state.head,
+      caughtUp: state.cursor >= state.head,
+    });
+  } catch (e) {
+    return c.json({ error: (e as Error).message }, 500);
+  }
+});
 
 // Recent settled fills that carry an on-chain tx hash. Powers the
 // "recent verified fills" list on the verify page. Fails soft: an
@@ -100,8 +134,10 @@ verifyApi.get("/tx/:hash", async (c) => {
   const transfers = usdcLogs
     .filter((l) => l.topics[0]?.toLowerCase() === TRANSFER_TOPIC.toLowerCase())
     .map(decodeTransfer);
-  const eip3009 = usdcLogs.some(
-    (l) => l.topics[0]?.toLowerCase() === AUTHORIZATION_USED_TOPIC.toLowerCase(),
+  const eip3009 = usdcLogs.some((l) =>
+    AUTHORIZATION_USED_TOPICS.some(
+      (t) => t.toLowerCase() === l.topics[0]?.toLowerCase(),
+    ),
   );
 
   // Gateway receipt: match this tx against the payment ledger. Missing
