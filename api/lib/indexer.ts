@@ -143,12 +143,14 @@ export async function advanceIndexer(): Promise<{
     if (from > head) break;
     const to = Math.min(head, last + SUBCHUNK);
 
-    const [authLogs, transferLogs] = await Promise.all([
-      getLogs(from, to, AUTHORIZATION_USED_TOPIC),
-      getLogs(from, to, TRANSFER_TOPIC),
-    ]);
+    // AuthorizationUsed is the sparse signal (dozens per 10k blocks even in
+    // active regions). Transfer logs are 100x denser and their JSON parse
+    // burns the cron CPU budget, so only fetch them when the sub-chunk
+    // actually contains settlements to pair.
+    const authLogs = await getLogs(from, to, AUTHORIZATION_USED_TOPIC);
 
     if (authLogs.length > 0) {
+      const transferLogs = await getLogs(from, to, TRANSFER_TOPIC);
       const transferByTx = largestTransfersByTx(transferLogs);
       const hashes = [...new Set(authLogs.map((l) => l.transactionHash.toLowerCase()))];
       const slugByTx = await attributeHashes(hashes);
