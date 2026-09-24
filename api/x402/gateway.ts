@@ -145,7 +145,7 @@ x402Gateway.all("/trial-voucher", async (c) => {
     wallet_address: wallet,
     credits_total: 1,
     credits_used: 0,
-    request_signature: sig.slice(0, 20) + "\u2026",
+    request_signature: sig.slice(0, 20) + "…",
   });
   return c.json({
     voucher: rows[0],
@@ -253,7 +253,19 @@ x402Gateway.all("/:slug", async (c) => {
         mimeType: "application/json",
       },
       accepts: [requirements],
-      extensions: { "payment-identifier": PAYMENT_IDENTIFIER_DECLARATION },
+      extensions: {
+        "payment-identifier": PAYMENT_IDENTIFIER_DECLARATION,
+        // Bazaar discovery extension (x402 extensions spec): lets x402scan
+        // and facilitator catalogs index the route as invocable. The gateway
+        // proxies arbitrary upstreams, so input mirrors the request method
+        // with no declared body schema, output is endpoint-specific JSON.
+        bazaar: {
+          info: {
+            input: { type: "http", method: c.req.method },
+            output: { type: "json" },
+          },
+        },
+      },
     };
     const encoded = Buffer.from(JSON.stringify(paymentRequired)).toString(
       "base64",
