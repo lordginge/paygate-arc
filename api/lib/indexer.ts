@@ -165,17 +165,13 @@ export async function advanceIndexer(): Promise<{
       // an unbounded fan-out would exceed it in active regions.
       const receipts: ({ logs: RpcLog[] } | null)[] = [];
       for (let b = 0; b < txHashes.length; b += RECEIPT_BATCH) {
-        receipts.push(
-          ...(await Promise.all(
-            txHashes
-              .slice(b, b + RECEIPT_BATCH)
-              .map((h) =>
-                arcRpc<{ logs: RpcLog[] } | null>("eth_getTransactionReceipt", [
-                  h,
-                ]),
-              )),
-          )),
+        const batch = txHashes.slice(b, b + RECEIPT_BATCH);
+        const results = await Promise.all(
+          batch.map((h) =>
+            arcRpc<{ logs: RpcLog[] } | null>("eth_getTransactionReceipt", [h]),
+          ),
         );
+        receipts.push(...results);
       }
       const transferLogs: RpcLog[] = [];
       for (const rc of receipts) {
