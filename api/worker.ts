@@ -22,7 +22,8 @@ export default {
     const url = new URL(request.url);
     if (
       url.pathname.startsWith("/api/") ||
-      url.pathname === "/.well-known/x402"
+      url.pathname === "/.well-known/x402" ||
+      url.pathname === "/openapi.json"
     ) {
       return app.fetch(request);
     }
