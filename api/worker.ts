@@ -20,7 +20,10 @@ const CSP = [
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    if (url.pathname.startsWith("/api/")) {
+    if (
+      url.pathname.startsWith("/api/") ||
+      url.pathname === "/.well-known/x402"
+    ) {
       return app.fetch(request);
     }
     const res = await env.ASSETS.fetch(request);
