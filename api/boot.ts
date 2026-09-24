@@ -39,6 +39,50 @@ app.get("/.well-known/x402", (c) => {
   );
 });
 
+// OpenAPI discovery document. This is the primary channel x402scan's
+// register-origin probe reads (its @agentcash/discovery version is
+// OpenAPI-only), so the paid routes are declared here with flat
+// x-payment-info pricing, which is the shape that validator accepts.
+app.get("/openapi.json", (c) => {
+  const paths = Object.fromEntries(
+    GUIDE_PARTS.map((p) => [
+      `/api/x402/${p.slug}`,
+      {
+        get: {
+          summary: p.title,
+          description:
+            "Paid x402 resource. Returns 402 with a payment challenge; pay 0.01 USDC on Arc mainnet (EIP-3009) to receive this guide part.",
+          responses: {
+            "200": { description: "Guide part content (paid)" },
+            "402": { description: "Payment required" },
+          },
+          "x-payment-info": {
+            protocols: ["x402"],
+            pricingMode: "fixed",
+            price: "0.01",
+            currency: "USD",
+          },
+        },
+      },
+    ]),
+  );
+  return c.json(
+    {
+      openapi: "3.1.0",
+      info: {
+        title: "PayGate x402",
+        version: "1.0.0",
+        description:
+          "Pay-per-call API marketplace settling in USDC on Arc mainnet (eip155:5042) via EIP-3009 and the Circle facilitator.",
+        contact: { url: "https://paygatex402.com/docs" },
+      },
+      paths,
+    },
+    200,
+    { "Cache-Control": "public, max-age=300", "Access-Control-Allow-Origin": "*" },
+  );
+});
+
 app.route("/api/x402", x402Gateway);
 app.route("/api/data", dataApi);
 app.route("/api/verify", verifyApi);
