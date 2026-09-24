@@ -4,10 +4,16 @@ import { sbSelect, sbUpsert } from "./supabase";
 
 // On-chain EIP-3009 indexer for Arc. Scans AuthorizationUsed events on the
 // native USDC contract, pairs each with the USDC Transfer in the same
-// transaction (fetched as a second getLogs window, not per-tx receipts),
-// attributes matches against the PayGate payment ledger, and stores a
-// resumable cursor. Runs from the Worker cron; everything is idempotent
-// (upserts keyed by tx_hash + log_index) so reruns are safe.
+// transaction (fetched via that transaction's receipt, one RPC call per
+// settlement), attributes matches against the PayGate payment ledger, and
+// stores a resumable cursor. Runs from the Worker cron; everything is
+// idempotent (upserts keyed by tx_hash + log_index) so reruns are safe.
+//
+// Why receipts and not a Transfer getLogs window: dense regions of Arc
+// carry 300k+ USDC Transfer logs per 10k blocks (observed 317,857 at
+// blocks 21,060,000-21,069,999), which is un-fetchable inside a cron
+// subrequest/CPU budget. Settlements are sparse by comparison, and a
+// receipt lookup is bounded by settlement count, not transfer volume.
 //
 // Cron CPU time is the hard constraint, so work is done in sub-chunks and
 // the cursor is persisted after every sub-chunk: a killed run never loses
@@ -20,6 +26,7 @@ const SUBCHUNK = 10_000; // blocks per sub-chunk
 const MAX_SUBCHUNKS_PER_RUN = 10; // ~100k blocks per cron tick while backfilling
 const TIME_BUDGET_MS = 25_000; // stop before the scheduled-handler CPU limit
 const UPSERT_BATCH = 500;
+const RECEIPT_BATCH = 25; // receipt lookups per subrequest-budget window
 // Arc's USDC emits AuthorizationUsed(address indexed authorizer,
 // bytes32 indexed nonce) — verified against live settle transactions
 // (e.g. block 21893689). Not the older AuthorizationUsed(bytes32) form.
@@ -150,9 +157,39 @@ export async function advanceIndexer(): Promise<{
     const authLogs = await getLogs(from, to, AUTHORIZATION_USED_TOPIC);
 
     if (authLogs.length > 0) {
-      const transferLogs = await getLogs(from, to, TRANSFER_TOPIC);
+      // Pair each settlement with the USDC Transfer in the same tx via the
+      // tx receipt (one call per settlement tx). A Transfer getLogs window
+      // is not viable: dense regions exceed 300k logs per sub-chunk.
+      const txHashes = [...new Set(authLogs.map((l) => l.transactionHash))];
+      // Batched, not Promise.all: cron subrequest budget is the hard cap and
+      // an unbounded fan-out would exceed it in active regions.
+      const receipts: ({ logs: RpcLog[] } | null)[] = [];
+      for (let b = 0; b < txHashes.length; b += RECEIPT_BATCH) {
+        receipts.push(
+          ...(await Promise.all(
+            txHashes
+              .slice(b, b + RECEIPT_BATCH)
+              .map((h) =>
+                arcRpc<{ logs: RpcLog[] } | null>("eth_getTransactionReceipt", [
+                  h,
+                ]),
+              )),
+          )),
+        );
+      }
+      const transferLogs: RpcLog[] = [];
+      for (const rc of receipts) {
+        for (const l of rc?.logs ?? []) {
+          if (
+            l.address.toLowerCase() === USDC_ADDRESS.toLowerCase() &&
+            l.topics[0]?.toLowerCase() === TRANSFER_TOPIC.toLowerCase()
+          ) {
+            transferLogs.push(l);
+          }
+        }
+      }
       const transferByTx = largestTransfersByTx(transferLogs);
-      const hashes = [...new Set(authLogs.map((l) => l.transactionHash.toLowerCase()))];
+      const hashes = txHashes.map((h) => h.toLowerCase());
       const slugByTx = await attributeHashes(hashes);
 
       const rows = authLogs.map((log) => {
