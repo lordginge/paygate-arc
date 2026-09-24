@@ -142,7 +142,7 @@ export default function Home() {
               value: stats.data != null ? stats.data.volumeUsdc.toFixed(2) : "\u2014",
             },
             { label: "Chain ID", value: "5042" },
-          ].map((s, i) => (
+          ].map((s) => (
             <div
               key={s.label}
               className="m3e-frame-soft px-6 py-6"

@@ -52,7 +52,7 @@ export function TrialCard() {
     setWallet(w);
     setPhase("claimed");
     getTrialBalance(w)
-      .then((b) => setCredit(b.credit))
+      .then((b) => setCredit(b.balance_usdc))
       .catch(() => undefined);
   }, []);
 
@@ -64,15 +64,15 @@ export function TrialCard() {
       setWallet(w);
       localStorage.setItem("paygate.trialWallet", w);
       const bal = await getTrialBalance(w);
-      if (bal.credit > 0) {
-        setCredit(bal.credit);
+      if (bal.balance_usdc > 0) {
+        setCredit(bal.balance_usdc);
         setPhase("claimed");
         return;
       }
       setPhase("claiming");
       await claimVoucher(w);
       const b2 = await getTrialBalance(w);
-      setCredit(b2.credit);
+      setCredit(b2.balance_usdc);
       setPhase("claimed");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "failed");
@@ -88,7 +88,7 @@ export function TrialCard() {
     setOutput(JSON.stringify(r.data, null, 2));
     setPhase("result");
     const b = await getTrialBalance(wallet);
-    setCredit(b.credit);
+    setCredit(b.balance_usdc);
   }
 
   return (
