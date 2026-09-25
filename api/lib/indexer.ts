@@ -27,6 +27,15 @@ const MAX_SUBCHUNKS_PER_RUN = 10; // ~100k blocks per cron tick while backfillin
 const TIME_BUDGET_MS = 25_000; // stop before the scheduled-handler CPU limit
 const UPSERT_BATCH = 500;
 const RECEIPT_BATCH = 25; // receipt lookups per subrequest-budget window
+// Workers cron invocations are hard-capped at 50 subrequests (observed on
+// this account: every stalled tick ended at exactly 50). A tick spends
+// blockNumber(1) + readCursor(1) + authGetLogs(1+) + eventsUpsert(1) +
+// writeCursor(1), leaving ~44 for receipt lookups. Stay well under: if a
+// window holds more settlements than the budget, process only the leading
+// ones and advance the cursor to just before the boundary block, so the
+// remainder is picked up next tick. Idempotent upserts make the overlap
+// harmless.
+const RECEIPT_BUDGET_PER_TICK = 38;
 // Arc's USDC emits AuthorizationUsed(address indexed authorizer,
 // bytes32 indexed nonce) — verified against live settle transactions
 // (e.g. block 21893689). Not the older AuthorizationUsed(bytes32) form.
@@ -156,16 +165,44 @@ export async function advanceIndexer(): Promise<{
     // actually contains settlements to pair.
     const authLogs = await getLogs(from, to, AUTHORIZATION_USED_TOPIC);
 
+    // The cursor may land short of `to` when the settlement count exceeds
+    // the receipt subrequest budget; the remainder is scanned next tick.
+    let cursorTarget = to;
+    let processLogs = authLogs;
+
     if (authLogs.length > 0) {
       // Pair each settlement with the USDC Transfer in the same tx via the
       // tx receipt (one call per settlement tx). A Transfer getLogs window
       // is not viable: dense regions exceed 300k logs per sub-chunk.
       const txHashes = [...new Set(authLogs.map((l) => l.transactionHash))];
+      let budgetHashes = txHashes;
+      if (txHashes.length > RECEIPT_BUDGET_PER_TICK) {
+        const inBudget = new Set(txHashes.slice(0, RECEIPT_BUDGET_PER_TICK));
+        // The last in-budget tx sets the boundary block. Include every
+        // settlement tx in that block so the cursor can rest on it whole
+        // (settlements per block are tiny; a pathological block throws
+        // loudly via the subrequest cap rather than skipping data).
+        const boundaryBlock = Number(
+          BigInt(
+            authLogs.find(
+              (l) => l.transactionHash === txHashes[RECEIPT_BUDGET_PER_TICK - 1],
+            )!.blockNumber,
+          ),
+        );
+        for (const l of authLogs) {
+          if (Number(BigInt(l.blockNumber)) === boundaryBlock) {
+            inBudget.add(l.transactionHash);
+          }
+        }
+        budgetHashes = txHashes.filter((h) => inBudget.has(h));
+        processLogs = authLogs.filter((l) => inBudget.has(l.transactionHash));
+        cursorTarget = boundaryBlock;
+      }
       // Batched, not Promise.all: cron subrequest budget is the hard cap and
       // an unbounded fan-out would exceed it in active regions.
       const receipts: ({ logs: RpcLog[] } | null)[] = [];
-      for (let b = 0; b < txHashes.length; b += RECEIPT_BATCH) {
-        const batch = txHashes.slice(b, b + RECEIPT_BATCH);
+      for (let b = 0; b < budgetHashes.length; b += RECEIPT_BATCH) {
+        const batch = budgetHashes.slice(b, b + RECEIPT_BATCH);
         const results = await Promise.all(
           batch.map((h) =>
             arcRpc<{ logs: RpcLog[] } | null>("eth_getTransactionReceipt", [h]),
@@ -185,10 +222,10 @@ export async function advanceIndexer(): Promise<{
         }
       }
       const transferByTx = largestTransfersByTx(transferLogs);
-      const hashes = txHashes.map((h) => h.toLowerCase());
+      const hashes = budgetHashes.map((h) => h.toLowerCase());
       const slugByTx = await attributeHashes(hashes);
 
-      const rows = authLogs.map((log) => {
+      const rows = processLogs.map((log) => {
         const main = transferByTx.get(log.transactionHash);
         return {
           tx_hash: log.transactionHash.toLowerCase(),
@@ -212,12 +249,17 @@ export async function advanceIndexer(): Promise<{
           "tx_hash,log_index",
         );
       }
-      events += authLogs.length;
+      events += processLogs.length;
     }
 
-    await writeCursor(to);
-    last = to;
+    await writeCursor(cursorTarget);
+    last = cursorTarget;
 
+    // Receipt-heavy sub-chunks spend most of the 50-subrequest cron cap;
+    // continuing into another sub-chunk would blow the budget mid-batch and
+    // lose the tick. Empty sub-chunks are nearly free, so keep sweeping
+    // those until the time budget runs out.
+    if (authLogs.length > 0) break;
     if (to >= head || Date.now() - started > TIME_BUDGET_MS) break;
   }
 
