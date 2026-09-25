@@ -43,7 +43,19 @@ export default {
     ctx: { waitUntil: (p: Promise<unknown>) => void },
   ): Promise<void> {
     ctx.waitUntil(
-      advanceIndexer().catch((e) => console.error("indexer advance:", e)),
+      advanceIndexer()
+        .then((r) =>
+          console.log(
+            `indexer advance: from=${r.from} to=${r.to} events=${r.events} caughtUp=${r.caughtUp}`,
+          ),
+        )
+        // Log, then rethrow: a swallowed failure is invisible in Workers
+        // analytics (the 21.17M cursor stall looked "green" for hours).
+        // A thrown cron error surfaces in the errors metric.
+        .catch((e) => {
+          console.error("indexer advance failed:", e);
+          throw e;
+        }),
     );
   },
 };
