@@ -16,6 +16,8 @@ async function binance(path: string): Promise<unknown> {
     "https://api.binance.com",
     "https://api.binance.us",
     "https://api1.binance.com",
+    // Public market-data mirror; reachable where the api.* hosts are blocked.
+    "https://data-api.binance.vision",
   ];
   let lastErr: unknown;
   for (const base of bases) {
@@ -38,6 +40,9 @@ function normSymbol(s: string): string {
   return up.endsWith("USDT") ? up : `${up}USDT`;
 }
 
+// USD-like quote assets we accept, mapped to the Binance symbol suffix.
+const QUOTE_SUFFIX = ["USDT", "USDC", "FDUSD"] as const;
+
 export const dataApi = new Hono();
 
 // Paywall-bypass guard: first-party paid upstreams must only be reachable
@@ -47,6 +52,7 @@ export const dataApi = new Hono();
 // deployments keep working until the secret is configured.
 const INTERNAL_KEY = process.env.INTERNAL_API_KEY ?? "";
 const PAID_UPSTREAM_PREFIXES = [
+  "/prices",
   "/ticker/",
   "/depth/",
   "/signals/",
@@ -64,6 +70,48 @@ dataApi.use("*", async (c, next) => {
     return c.json({ error: "Not Found" }, 404);
   }
   return next();
+});
+
+// Multi-asset USD spot prices. Backs the crypto-prices marketplace listing.
+// Binance-backed (CoinGecko's free tier rate-limits shared Worker egress
+// IPs, which made it unreliable as a paid upstream). Accepts
+// ?symbols=bitcoin,ethereum or ?ids=bitcoin,ethereum (CoinGecko-style alias)
+// and returns a CoinGecko-compatible { id: { usd } } map so existing buyers
+// do not have to change parsing.
+const ID_TO_BASE: Record<string, string> = {
+  bitcoin: "BTC", btc: "BTC",
+  ethereum: "ETH", eth: "ETH",
+  solana: "SOL", sol: "SOL",
+  usdc: "USDC", "usd-coin": "USDC",
+  arbitrum: "ARB", arb: "ARB",
+  chainlink: "LINK", link: "LINK",
+  dogecoin: "DOGE", doge: "DOGE",
+  ripple: "XRP", xrp: "XRP",
+  avalanche: "AVAX", avax: "AVAX",
+  polygon: "POL", matic: "POL", pol: "POL",
+};
+dataApi.get("/prices", async (c) => {
+  const raw =
+    c.req.query("symbols") ?? c.req.query("ids") ?? "bitcoin,ethereum,solana";
+  const ids = raw.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const out: Record<string, { usd: number }> = {};
+  for (const id of ids.slice(0, 25)) {
+    const base = ID_TO_BASE[id] ?? id.toUpperCase();
+    let price: number | null = null;
+    for (const q of QUOTE_SUFFIX) {
+      try {
+        const d = (await binance(
+          `/api/v3/ticker/price?symbol=${base}${q}`,
+        )) as { price?: string };
+        if (d?.price) { price = Number(d.price); break; }
+      } catch { /* try next quote */ }
+    }
+    if (price != null) out[id] = { usd: price };
+  }
+  if (Object.keys(out).length === 0) {
+    return c.json({ error: "no prices resolved", requested: ids }, 502);
+  }
+  return c.json({ ...out, source: "binance-spot" });
 });
 
 // 24h ticker stats (port of PerCall /ticker/:symbol, settled on Arc)
