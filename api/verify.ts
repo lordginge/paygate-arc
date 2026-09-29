@@ -49,23 +49,38 @@ export const verifyApi = new Hono();
 // AuthorizationUsed events, not from our own gateway, so they cover every
 // EIP-3009 settlement on Arc the sweep has reached. cursor/head let any
 // reader see how far behind the sweep is.
+//
+// Stats are served from eip3009_stats_cache, a one-row snapshot the indexer
+// refreshes after any tick that wrote events. The raw table is far too big
+// to aggregate inside a PostgREST request (the naive select got silently
+// truncated at 1,000 rows, which is why this endpoint used to read "1000").
 verifyApi.get("/summary", async (c) => {
   try {
-    const [state, events] = await Promise.all([
+    const [state, cache] = await Promise.all([
       indexerState(),
-      sbSelect<{ value_usdc: number | null; payer: string | null }>(
-        "eip3009_events",
-        "select=value_usdc,payer",
-      ).catch(() => [] as { value_usdc: number | null; payer: string | null }[]),
+      sbSelect<{
+        count: number;
+        volume_usdc: number;
+        unique_payers: number;
+        refreshed_at: string;
+      }>(
+        "eip3009_stats_cache",
+        "select=count,volume_usdc,unique_payers,refreshed_at",
+      ).catch(() => [] as {
+        count: number;
+        volume_usdc: number;
+        unique_payers: number;
+        refreshed_at: string;
+      }[]),
     ]);
-    const volume = events.reduce((s, e) => s + (Number(e.value_usdc) || 0), 0);
-    const payers = new Set(events.map((e) => e.payer).filter(Boolean));
+    const stats = cache[0];
     return c.json({
       chain: "eip155:5042",
       usdc: USDC_ADDRESS,
-      eip3009SettlementCount: events.length,
-      eip3009VolumeUsdc: Number(volume.toFixed(6)),
-      uniquePayers: payers.size,
+      eip3009SettlementCount: stats?.count ?? 0,
+      eip3009VolumeUsdc: Number(Number(stats?.volume_usdc ?? 0).toFixed(6)),
+      uniquePayers: stats?.unique_payers ?? 0,
+      statsRefreshedAt: stats?.refreshed_at ?? null,
       cursor: state.cursor,
       head: state.head,
       caughtUp: state.cursor >= state.head,
