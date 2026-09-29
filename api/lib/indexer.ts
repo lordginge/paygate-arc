@@ -1,6 +1,6 @@
 import { keccak256, toBytes } from "viem";
 import { arcRpc, USDC_ADDRESS, USDC_DECIMALS } from "../x402/config";
-import { sbSelect, sbUpsert } from "./supabase";
+import { sbRpc, sbSelect, sbUpsert } from "./supabase";
 
 // On-chain EIP-3009 indexer for Arc. Scans AuthorizationUsed events on the
 // native USDC contract, pairs each with the USDC Transfer in the same
@@ -133,7 +133,7 @@ async function attributeHashes(
     );
     const slugById = new Map(eps.map((e) => [e.id, e.slug]));
     for (const r of ledger) {
-      out.set(r.tx_hash, slugById.get(r.endpoint_id) ?? null);
+      out.set(r.tx_hash, slugByTx.get(r.endpoint_id) ?? null);
     }
   } catch {
     // attribution fails soft; on-chain rows still land
@@ -261,6 +261,17 @@ export async function advanceIndexer(): Promise<{
     // those until the time budget runs out.
     if (authLogs.length > 0) break;
     if (to >= head || Date.now() - started > TIME_BUDGET_MS) break;
+  }
+
+  // Keep the public stats snapshot in step with the index. One extra
+  // subrequest, only on ticks that wrote events; the 38-receipt budget
+  // leaves headroom under the 50-subrequest cron cap. A refresh failure
+  // must never stall indexing, so it fails soft (the snapshot is a few
+  // minutes stale at worst).
+  if (events > 0) {
+    await sbRpc("refresh_eip3009_stats", {}).catch((e) =>
+      console.error("stats refresh failed:", e),
+    );
   }
 
   return { from: runFrom, to: last, events, caughtUp: last >= head };
