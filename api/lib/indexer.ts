@@ -133,7 +133,7 @@ async function attributeHashes(
     );
     const slugById = new Map(eps.map((e) => [e.id, e.slug]));
     for (const r of ledger) {
-      out.set(r.tx_hash, slugByTx.get(r.endpoint_id) ?? null);
+      out.set(r.tx_hash, slugById.get(r.endpoint_id) ?? null);
     }
   } catch {
     // attribution fails soft; on-chain rows still land
