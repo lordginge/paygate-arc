@@ -5,7 +5,7 @@
 
 import { Hono } from "hono";
 import type { HttpBindings } from "@hono/node-server";
-import { sbSelect, sbInsert } from "../lib/supabase";
+import { sbSelect, sbInsert, sbUpsert } from "../lib/supabase";
 import {
   ARC_NETWORK,
   ARC_CHAIN_ID,
@@ -54,6 +54,25 @@ x402Gateway.onError((err, c) => {
 // First-login template call. Buyer signs a 0-value EIP-3009 authorisation
 // (same motion as a real paid call), we verify locally and issue $1 credit.
 x402Gateway.all("/trial-voucher", async (c) => {
+  // Vouchers hand out real credit, so this is the most farmable route in
+  // the product. The wallet signature already proves control of a fresh
+  // address; the limiter stops one caller from spraying it from a single
+  // vantage point. Per-isolate damping, not a global quota.
+  {
+    const { callerKey, rateLimited } = await import("../lib/rateLimit");
+    const { limited, retryAfterSec } = rateLimited(
+      callerKey(c.req.raw, "trial-voucher"),
+      { limit: 10, windowMs: 3_600_000 },
+    );
+    if (limited) {
+      return c.json(
+        { error: "Too many voucher claims, retry later" },
+        429,
+        { "Retry-After": String(retryAfterSec) },
+      );
+    }
+  }
+
   const resourceUrl = new URL(c.req.url);
   const requirements: PaymentRequirements = {
     scheme: "exact",
@@ -366,14 +385,31 @@ x402Gateway.all("/:slug", async (c) => {
         return c.json({ error: settled.error ?? "Settlement failed" }, 402);
       }
 
+      // Ledger row for EVERY real settle, not just identifier carries. The
+      // indexer and /verify attribute on-chain settlements by joining
+      // payment_ids.tx_hash; without an unconditional insert, fills from
+      // buyers that do not send a payment-identifier (most of them) settle
+      // on-chain but never attribute, leaving the proof layer blind to our
+      // own marketplace's payments. The identifier path stays keyed by the
+      // caller's id for dedup; the fallback path is keyed by tx hash so the
+      // same settle can never land twice.
+      const ledgerRow = {
+        fingerprint: payFingerprint(slug, requirements.amount, payee.payTo),
+        endpoint_id: endpoint.id,
+        payer_address: payer || "unknown",
+        tx_hash: txHash || null,
+      };
       if (paymentIdentifier) {
         await sbInsert("payment_ids", {
           id: paymentIdentifier,
-          fingerprint: payFingerprint(slug, requirements.amount, payee.payTo),
-          endpoint_id: endpoint.id,
-          payer_address: payer || "unknown",
-          tx_hash: txHash || null,
+          ...ledgerRow,
         }).catch((e) => console.error("payment_ids insert failed:", e));
+      } else if (txHash) {
+        await sbUpsert(
+          "payment_ids",
+          { id: `tx:${txHash.toLowerCase()}`, ...ledgerRow },
+          "id",
+        ).catch((e) => console.error("payment_ids upsert failed:", e));
       }
     }
   } else {
