@@ -1,7 +1,7 @@
 // x402 payment gateway for registered marketplace endpoints.
 // Flow: unpaid request -> 402 + PAYMENT-REQUIRED -> buyer retries with
-// Payment-Signature -> we settle via Circle Facilitator on Arc -> proxy the
-// call to the seller's upstream API -> log the payment in Supabase.
+// Payment-Signature -> we probe the upstream, settle via Circle Facilitator
+// on Arc only if the upstream delivered, then serve the fetched body.
 
 import { Hono } from "hono";
 import type { HttpBindings } from "@hono/node-server";
@@ -304,6 +304,91 @@ x402Gateway.all("/:slug", async (c) => {
   let paymentIdentifier: string | null = null;
   let dedupReplay = false;
 
+  // ---- Proxy helper (defined before use, closes over context) -------------
+  // Builds the upstream request WITHOUT the buyer's payment headers. The
+  // base64 payment-signature is large and must never be forwarded to a
+  // seller's upstream (it is both a leak and trips header-size limits).
+  // Provenance headers are NOT set here; they are response-side, added after
+  // a successful settle.
+  const STRIP_TO_UPSTREAM = new Set([
+    ...HOP_BY_HOP,
+    "x-trial-wallet",
+    "x-trial-ts",
+    "x-trial-sig",
+  ]);
+  async function fetchUpstream(): Promise<Response> {
+    const fwdHeaders = new Headers();
+    c.req.raw.headers.forEach((value, key) => {
+      if (!STRIP_TO_UPSTREAM.has(key.toLowerCase())) fwdHeaders.set(key, value);
+    });
+    fwdHeaders.delete("x-paygate-internal");
+    const internalKey = process.env.INTERNAL_API_KEY ?? "";
+    if (internalKey) fwdHeaders.set("x-paygate-internal", internalKey);
+
+    const hasBody = !["GET", "HEAD"].includes(c.req.method);
+    const body = hasBody ? await c.req.raw.arrayBuffer() : undefined;
+
+    if (endpoint.upstream_url.startsWith("/")) {
+      const { dataApi } = await import("../data");
+      const u = new URL(endpoint.upstream_url, "http://internal");
+      resourceUrl.searchParams.forEach((v, k) => u.searchParams.append(k, v));
+      const internalPath =
+        u.pathname.replace(/^\/api\/data/, "") + u.search;
+      return dataApi.request(internalPath, {
+        method: c.req.method,
+        headers: fwdHeaders,
+        body,
+      });
+    }
+    const upstreamUrl = new URL(endpoint.upstream_url);
+    resourceUrl.searchParams.forEach((v, k) =>
+      upstreamUrl.searchParams.append(k, v),
+    );
+    return fetch(upstreamUrl, {
+      method: c.req.method,
+      headers: fwdHeaders,
+      body,
+    });
+  }
+
+  // ---- Upstream probe BEFORE settlement -----------------------------------
+  // The cardinal rule of a paid gateway: never take money for goods that did
+  // not arrive. Fetch the seller's upstream first (without disclosing any
+  // payment). Only if it succeeds do we settle the buyer's authorisation and
+  // then serve the already-fetched body. If the upstream errors or is
+  // unreachable, we return 502 and the buyer's signed authorisation is simply
+  // never submitted, so no USDC moves. This converts "paid but got a 429 from
+  // CoinGecko" into "not charged".
+  //
+  // Dedup replays skip the settle but still re-serve the resource, so they
+  // probe the upstream too (a replay of a settled payment is entitled to the
+  // goods). Trial mode settles nothing by definition, but still probes.
+  let upstream: Response | null = null;
+  const shouldServe =
+    paymentHeader || (trialWallet && trialSig && trialTs);
+  if (shouldServe) {
+    try {
+      upstream = await fetchUpstream();
+    } catch (e) {
+      console.error("fetchUpstream threw:", e);
+      return c.json(
+        { error: "Upstream fetch error; payment NOT taken" },
+        502,
+      );
+    }
+    if (!upstream.ok) {
+      const detail = await upstream.text().catch(() => "");
+      return c.json(
+        {
+          error: "Upstream endpoint failed; payment NOT taken",
+          upstreamStatus: upstream.status,
+          detail: detail.slice(0, 200),
+        },
+        502,
+      );
+    }
+  }
+
   if (paymentHeader) {
     // ---- Paid request: settle then serve ----------------------------------
     // Circle-wallet payees sign via the Circle Sign API, so the platform
@@ -520,48 +605,13 @@ x402Gateway.all("/:slug", async (c) => {
     stampHeader = `error:${String((e as Error)?.message ?? e).slice(0, 120)}`;
   }
 
-  // Proxy the call to the seller's upstream API.
-  // Relative upstreams (first-party /api/data/* endpoints) are dispatched
-  // in-process: a Worker fetching its own public hostname trips Cloudflare's
-  // loop protection (522), so we call the data router directly instead.
-  const fwdHeaders = new Headers();
-  c.req.raw.headers.forEach((value, key) => {
-    if (!HOP_BY_HOP.has(key.toLowerCase())) fwdHeaders.set(key, value);
-  });
-  // Payment provenance for upstream handlers (settle already succeeded here).
-  fwdHeaders.set("x-payer-address", payer || "unknown");
-  if (txHash) fwdHeaders.set("x-payment-tx", txHash);
-  // Internal dispatch key: never forward a client-supplied value, always
-  // set our own so first-party paid upstreams can tell gateway traffic
-  // from direct /api/data/* hits (paywall-bypass guard in data.ts).
-  fwdHeaders.delete("x-paygate-internal");
-  const internalKey = process.env.INTERNAL_API_KEY ?? "";
-  if (internalKey) fwdHeaders.set("x-paygate-internal", internalKey);
-
-  const hasBody = !["GET", "HEAD"].includes(c.req.method);
-
-  let upstream: Response;
-  if (endpoint.upstream_url.startsWith("/")) {
-    const { dataApi } = await import("../data");
-    const u = new URL(endpoint.upstream_url, "http://internal");
-    resourceUrl.searchParams.forEach((v, k) => u.searchParams.append(k, v));
-    const internalPath =
-      u.pathname.replace(/^\/api\/data/, "") + u.search;
-    upstream = await dataApi.request(internalPath, {
-      method: c.req.method,
-      headers: fwdHeaders,
-      body: hasBody ? await c.req.raw.arrayBuffer() : undefined,
-    });
-  } else {
-    const upstreamUrl = new URL(endpoint.upstream_url);
-    resourceUrl.searchParams.forEach((v, k) =>
-      upstreamUrl.searchParams.append(k, v),
-    );
-    upstream = await fetch(upstreamUrl, {
-      method: c.req.method,
-      headers: fwdHeaders,
-      body: hasBody ? await c.req.raw.arrayBuffer() : undefined,
-    });
+  // Serve the upstream response fetched before settlement. Payment
+  // provenance headers are attached to the response (not the upstream
+  // request, which already happened without them by design).
+  if (!upstream) {
+    // Defensive: shouldServe guarantees upstream was fetched for any path
+    // that reaches here. If logic ever changes, fail closed.
+    return c.json({ error: "Upstream not fetched" }, 500);
   }
 
   const responseHeaders = new Headers();
