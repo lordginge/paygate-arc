@@ -10,12 +10,31 @@ import { statusApi } from "./status";
 import { onrampSessionHandler } from "./onramp";
 import { GUIDE_PARTS } from "./x402/guide";
 import { loadDotenv } from "./lib/dotenv-safe";
+import { callerKey, rateLimited } from "./lib/rateLimit";
 
 await loadDotenv();
 
 const app = new Hono();
 
 app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
+
+// Rate-limit the free, unauthenticated write surface. Paid x402 routes
+// stay unlimited (the payment is the throttle). Per-isolate, see
+// lib/rateLimit.ts for the trade-off.
+app.use("/api/trpc/*", async (c, next) => {
+  const { limited, retryAfterSec } = rateLimited(
+    callerKey(c.req.raw, "trpc"),
+    { limit: 60, windowMs: 60_000 },
+  );
+  if (limited) {
+    return c.json(
+      { error: "Rate limit exceeded, retry later" },
+      429,
+      { "Retry-After": String(retryAfterSec) },
+    );
+  }
+  await next();
+});
 
 // x402 discovery manifest (x402scan registration + IETF draft-hawkins
 // well-known URI). Origin is pinned in config, never derived from the
