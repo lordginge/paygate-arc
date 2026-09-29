@@ -33,7 +33,10 @@ app.use("/api/trpc/*", async (c, next) => {
       { "Retry-After": String(retryAfterSec) },
     );
   }
-  await next();
+  // Hono middleware MUST return next()'s result. Discarding it (bare
+  // `await next()`) leaves the response unset and turns every tRPC call
+  // into a 500.
+  return await next();
 });
 
 // x402 discovery manifest (x402scan registration + IETF draft-hawkins
