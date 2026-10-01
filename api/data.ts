@@ -53,6 +53,7 @@ export const dataApi = new Hono();
 const INTERNAL_KEY = process.env.INTERNAL_API_KEY ?? "";
 const PAID_UPSTREAM_PREFIXES = [
   "/prices",
+  "/centrifuge/",
   "/ticker/",
   "/depth/",
   "/signals/",
@@ -112,6 +113,177 @@ dataApi.get("/prices", async (c) => {
     return c.json({ error: "no prices resolved", requested: ids }, 502);
   }
   return c.json({ ...out, source: "binance-spot" });
+});
+
+// Centrifuge RWA protocol data. Backed by Centrifuge's public read-only
+// GraphQL indexer (https://api.centrifuge.io, no key required), which covers
+// pools, share-class tokens and vaults across their multichain deployment.
+// We normalise the fixed-point integers into plain USD numbers so buyers get
+// analyst-ready JSON, not raw wei strings.
+const CENTRIFUGE_API = "https://api.centrifuge.io";
+
+async function centrifuge<T>(query: string): Promise<T> {
+  const res = await fetch(CENTRIFUGE_API, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "PayGate/1.0",
+    },
+    body: JSON.stringify({ query }),
+    signal: AbortSignal.timeout(9000),
+  });
+  if (!res.ok) throw new Error(`centrifuge upstream ${res.status}`);
+  const body = (await res.json()) as {
+    data?: T;
+    errors?: { message?: string }[];
+  };
+  if (body.errors?.length) {
+    throw new Error(body.errors[0].message ?? "centrifuge graphql error");
+  }
+  if (!body.data) throw new Error("empty centrifuge response");
+  return body.data;
+}
+
+// tokenPrice is 18-decimal fixed point; totalIssuance uses the token's own
+// decimals. Values can exceed 2^53, so accept the tiny rounding error that
+// comes with Number() for display-grade output.
+function fromBase(raw: string | null | undefined, decimals: number): number {
+  if (!raw) return 0;
+  return Number(raw) / 10 ** decimals;
+}
+
+interface CfgToken {
+  id: string;
+  symbol: string;
+  totalIssuance: string;
+  tokenPrice: string;
+  decimals: number;
+}
+
+interface CfgPool {
+  id: string;
+  name: string;
+  centrifugeId: string;
+  isActive: boolean;
+  tokens: { items: CfgToken[] };
+}
+
+interface CfgVault {
+  id: string;
+  poolId: string;
+  tokenId: string;
+  assetAddress: string;
+  status: string;
+  isActive: boolean;
+  blockchain: { name: string; centrifugeId: string } | null;
+}
+
+function mapToken(t: CfgToken) {
+  const priceUsd = fromBase(t.tokenPrice, 18);
+  const supply = fromBase(t.totalIssuance, t.decimals || 18);
+  return {
+    tokenId: t.id,
+    symbol: t.symbol,
+    priceUsd,
+    supply,
+    tvlUsd: supply * priceUsd,
+  };
+}
+
+// Active pools with per-token NAV, supply and TVL. Backs the
+// centrifuge-rwa-pools marketplace listing.
+dataApi.get("/centrifuge/pools", async (c) => {
+  try {
+    const d = await centrifuge<{ pools: { items: CfgPool[] } }>(
+      `query { pools(where: { isActive: true, name_not: null }, limit: 100) {
+        items { id name centrifugeId isActive
+          tokens { items { id symbol totalIssuance tokenPrice decimals } } } } }`,
+    );
+    const pools = d.pools.items.map((p) => {
+      const tokens = p.tokens.items.map(mapToken);
+      return {
+        poolId: p.id,
+        name: p.name,
+        hubChainId: p.centrifugeId,
+        tokens,
+        tvlUsd: tokens.reduce((a, t) => a + t.tvlUsd, 0),
+      };
+    });
+    pools.sort((a, b) => b.tvlUsd - a.tvlUsd);
+    return c.json({
+      pools,
+      poolCount: pools.length,
+      totalTvlUsd: pools.reduce((a, p) => a + p.tvlUsd, 0),
+      source: "centrifuge-api-v3",
+    });
+  } catch (e) {
+    return c.json({ error: "upstream unavailable", detail: String(e) }, 502);
+  }
+});
+
+// Every active share-class token with current NAV price. Backs the
+// centrifuge-rwa-tokens marketplace listing.
+dataApi.get("/centrifuge/tokens", async (c) => {
+  try {
+    const d = await centrifuge<{
+      tokens: { items: (CfgToken & { pool: { name: string } | null })[] };
+    }>(
+      `query { tokens(limit: 200) {
+        items { id symbol totalIssuance tokenPrice decimals pool { name } } } }`,
+    );
+    const tokens = d.tokens.items
+      .map((t) => ({ ...mapToken(t), pool: t.pool?.name ?? null }))
+      .sort((a, b) => b.tvlUsd - a.tvlUsd);
+    return c.json({ tokens, source: "centrifuge-api-v3" });
+  } catch (e) {
+    return c.json({ error: "upstream unavailable", detail: String(e) }, 502);
+  }
+});
+
+// Single pool detail with its vault deployments per chain. Backs the
+// centrifuge-rwa-pool marketplace listing (id is the numeric pool ID).
+dataApi.get("/centrifuge/pool/:id", async (c) => {
+  const id = c.req.param("id");
+  if (!/^\d{1,20}$/.test(id)) {
+    return c.json({ error: "pool id must be numeric" }, 400);
+  }
+  try {
+    const d = await centrifuge<{
+      pools: { items: CfgPool[] };
+      vaults: { items: CfgVault[] };
+    }>(
+      `query {
+        pools(where: { id: "${id}" }, limit: 1) {
+          items { id name centrifugeId isActive
+            tokens { items { id symbol totalIssuance tokenPrice decimals } } } }
+        vaults(where: { poolId: "${id}" }, limit: 100) {
+          items { id poolId tokenId assetAddress status isActive
+            blockchain { name centrifugeId } } }
+      }`,
+    );
+    const p = d.pools.items[0];
+    if (!p) return c.json({ error: "pool not found", poolId: id }, 404);
+    const tokens = p.tokens.items.map(mapToken);
+    return c.json({
+      poolId: p.id,
+      name: p.name,
+      hubChainId: p.centrifugeId,
+      isActive: p.isActive,
+      tokens,
+      tvlUsd: tokens.reduce((a, t) => a + t.tvlUsd, 0),
+      vaults: d.vaults.items.map((v) => ({
+        address: v.id,
+        chain: v.blockchain?.name ?? null,
+        assetAddress: v.assetAddress,
+        tokenId: v.tokenId,
+        status: v.status,
+        isActive: v.isActive,
+      })),
+      source: "centrifuge-api-v3",
+    });
+  } catch (e) {
+    return c.json({ error: "upstream unavailable", detail: String(e) }, 502);
+  }
 });
 
 // 24h ticker stats (port of PerCall /ticker/:symbol, settled on Arc)
@@ -411,7 +583,7 @@ dataApi.get("/arc/usdc-feed", async (c) => {
         if (!m) throw e;
         const clampTo = Math.min(to, parseInt(m[1], 10));
         if (clampTo <= from) return [];
-        return (await fetchRange(from, clampTo)) ?? [];
+        return (await fetchSafe(from, clampTo)) ?? [];
       }
     };
     let logs: RpcLog[] = [];
