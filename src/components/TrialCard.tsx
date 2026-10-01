@@ -43,6 +43,7 @@ export function TrialCard() {
     [endpoints, maxPrice],
   );
   const selected = endpoints.find((e) => e.slug === slug);
+  const selectedName = selected?.name ?? slug;
   const selectedPrice = selected ? Number(selected.price_usdc) : 0.05;
 
   useEffect(() => {
@@ -105,8 +106,8 @@ export function TrialCard() {
         Ask your own call. No email, no checkout.
       </h3>
       <p className="mt-2 text-sm leading-relaxed text-white/45">
-        Connect Arc once, sign for $1 trial credit, then point it at any listed
-        endpoint or paste a slug. Add an optional question and it rides along as
+        Connect Arc once, sign for $1 trial credit, then pick an endpoint. Add
+        an optional question and it rides along as
         <span className="font-mono"> ?ask=</span>.
       </p>
 
@@ -119,15 +120,19 @@ export function TrialCard() {
             {["arc-chain-status", ...suggestions.map((s) => s.slug)]
               .filter((v, i, a) => a.indexOf(v) === i)
               .slice(0, 5)
-              .map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setSlug(s)}
-                  className="m3e-chip text-white/60 hover:text-white"
-                >
-                  {s}
-                </button>
-              ))}
+              .map((s) => {
+                const name =
+                  endpoints.find((e) => e.slug === s)?.name ?? s;
+                return (
+                  <button
+                    key={s}
+                    onClick={() => setSlug(s)}
+                    className="m3e-chip text-white/60 hover:text-white"
+                  >
+                    {name}
+                  </button>
+                );
+              })}
           </div>
         </div>
       )}
@@ -166,7 +171,7 @@ export function TrialCard() {
                     onClick={() => setSlug(e.slug)}
                     className={`m3e-chip ${slug === e.slug ? "border-[#3B6DFF]/60 text-white" : "text-white/55 hover:text-white"}`}
                   >
-                    {e.slug}
+                    {e.name}
                   </button>
                 ))}
               </div>
@@ -175,34 +180,31 @@ export function TrialCard() {
             <div className="grid gap-3 md:grid-cols-2">
               <label className="block">
                 <span className="mono-label text-white/30">Endpoint</span>
-                <input
+                <select
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
-                  list="paygate-endpoints"
-                  spellCheck={false}
-                  className="m3e-input mt-2 w-full px-4 py-4 font-mono text-sm text-white placeholder:text-white/25"
-                />
-                <datalist id="paygate-endpoints">
+                  className="m3e-input mt-2 w-full appearance-none px-4 py-4 text-sm text-white"
+                >
                   {endpoints.map((e) => (
                     <option key={e.slug} value={e.slug}>
-                      {e.name}
+                      {e.name} — ${Number(e.price_usdc).toFixed(3)}
                     </option>
                   ))}
-                </datalist>
+                </select>
               </label>
               <label className="block">
                 <span className="mono-label text-white/30">Ask (optional)</span>
                 <input
                   value={ask}
                   onChange={(e) => setAsk(e.target.value)}
-                  placeholder="latest block, tx for 0x…, price of ETH"
+                  placeholder="latest block, price of ETH"
                   className="m3e-input mt-2 w-full px-4 py-4 text-sm text-white placeholder:text-white/25"
                 />
               </label>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <button onClick={runTrialCall} className="btn-block">
-                RUN {slug || "arc-chain-status"} (${selectedPrice.toFixed(3)}) →
+                RUN {selectedName.toUpperCase()} (${selectedPrice.toFixed(3)}) →
               </button>
               <p className="mono-label text-white/30">
                 {wallet.slice(0, 6)}…{wallet.slice(-4)}
