@@ -2,6 +2,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { Fibres } from "@/components/Fibres";
 import { TxTerminal } from "@/components/TxTerminal";
 import { TrialCard } from "@/components/TrialCard";
+import { FundCard } from "@/components/FundCard";
 import { trpc } from "@/providers/trpc";
 import { ArrowUpRight, Copy, Check, Pause, Play } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -96,6 +97,11 @@ export default function Home() {
         {/* First-login trial: zero-value signature -> $1 credit */}
         <div className="mt-10">
           <TrialCard />
+        </div>
+
+        {/* Funding: card / Apple Pay / Google Pay -> USDC on Arc */}
+        <div className="mt-6">
+          <FundCard />
         </div>
 
         {/* Built to the brief: what Circle and Arc are asking for */}
