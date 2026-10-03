@@ -1,11 +1,23 @@
 import { useRef, useState } from "react";
+
+// Prefill the address the visitor is already using on the site (email
+// wallet session or trial wallet), so topping up is one less step.
+function initialAddress(): string {
+  try {
+    const trial = localStorage.getItem("paygate.trialWallet");
+    if (trial && /^0x[a-fA-F0-9]{40}$/.test(trial)) return trial;
+  } catch {
+    /* ignore */
+  }
+  return "";
+}
 import { AppKit } from "@circle-fin/app-kit";
 
 // Funding card: buyers put USDC on Arc with a card, Apple Pay or Google Pay
 // via Circle's Onramp widget. The server mints a short-lived session so the
 // Circle API key never reaches the browser.
 export function FundCard() {
-  const [address, setAddress] = useState("");
+  const [address, setAddress] = useState(initialAddress);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const kitRef = useRef<AppKit | null>(null);

@@ -3,9 +3,13 @@ import { Loader2 } from "lucide-react";
 import {
   claimVoucher,
   connectArc,
+  extensionSigners,
   getTrialBalance,
   spendTrial,
 } from "@/lib/trial";
+import type { Signers } from "@/lib/trial";
+import type { CircleSession } from "@/lib/circleWallet";
+import { EmailSignIn } from "@/components/EmailSignIn";
 import { trpc } from "@/providers/trpc";
 
 type Phase =
@@ -15,6 +19,7 @@ type Phase =
   | "claimed"
   | "spending"
   | "result"
+  | "reauth"
   | "error";
 
 type EndpointOption = {
@@ -26,6 +31,7 @@ type EndpointOption = {
 export function TrialCard() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [wallet, setWallet] = useState<`0x${string}` | null>(null);
+  const [signers, setSigners] = useState<Signers | null>(null);
   const [credit, setCredit] = useState<number>(0);
   const [slug, setSlug] = useState("arc-chain-status");
   const [ask, setAsk] = useState("");
@@ -57,24 +63,40 @@ export function TrialCard() {
       .catch(() => undefined);
   }, []);
 
+  async function afterConnect(w: `0x${string}`, s: Signers) {
+    setWallet(w);
+    setSigners(s);
+    localStorage.setItem("paygate.trialWallet", w);
+    const bal = await getTrialBalance(w);
+    if (bal.balance_usdc > 0) {
+      setCredit(bal.balance_usdc);
+      setPhase("claimed");
+      return;
+    }
+    setPhase("claiming");
+    await claimVoucher(w, s);
+    const b2 = await getTrialBalance(w);
+    setCredit(b2.balance_usdc);
+    setPhase("claimed");
+  }
+
   async function start() {
     setErr("");
     setPhase("connecting");
     try {
       const w = await connectArc();
-      setWallet(w);
-      localStorage.setItem("paygate.trialWallet", w);
-      const bal = await getTrialBalance(w);
-      if (bal.balance_usdc > 0) {
-        setCredit(bal.balance_usdc);
-        setPhase("claimed");
-        return;
-      }
-      setPhase("claiming");
-      await claimVoucher(w);
-      const b2 = await getTrialBalance(w);
-      setCredit(b2.balance_usdc);
-      setPhase("claimed");
+      await afterConnect(w, extensionSigners(w));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "failed");
+      setPhase("error");
+    }
+  }
+
+  async function onCircleSession(session: CircleSession, s: Signers) {
+    setErr("");
+    setPhase("connecting");
+    try {
+      await afterConnect(session.address, s);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "failed");
       setPhase("error");
@@ -84,12 +106,25 @@ export function TrialCard() {
   async function runTrialCall() {
     if (!wallet) return;
     setErr("");
+    if (!signers) {
+      // Restored sessions can read a balance but not sign: Circle user
+      // tokens expire, so ask for a fresh email sign-in (seconds).
+      setErr("Your sign-in expired for security. Sign in again below, it takes a few seconds.");
+      setPhase("reauth");
+      return;
+    }
+    const s = signers;
     setPhase("spending");
-    const r = await spendTrial(wallet, slug || "arc-chain-status", ask);
-    setOutput(JSON.stringify(r.data, null, 2));
-    setPhase("result");
-    const b = await getTrialBalance(wallet);
-    setCredit(b.balance_usdc);
+    try {
+      const r = await spendTrial(wallet, slug || "arc-chain-status", ask, s);
+      setOutput(JSON.stringify(r.data, null, 2));
+      setPhase("result");
+      const b = await getTrialBalance(wallet);
+      setCredit(b.balance_usdc);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "failed");
+      setPhase("error");
+    }
   }
 
   return (
@@ -103,18 +138,24 @@ export function TrialCard() {
         )}
       </div>
       <h3 className="m3-headline mt-4 text-2xl text-white">
-        Ask your own call. No email, no checkout.
+        Ask your own call. First one is on us.
       </h3>
       <p className="mt-2 text-sm leading-relaxed text-white/45">
-        Connect Arc once, sign for $1 trial credit, then pick an endpoint. Add
-        an optional question and it rides along as
-        <span className="font-mono"> ?ask=</span>.
+        Sign in to claim $1 of trial credit, pick an endpoint, and watch a real
+        payment settle on Arc. New to crypto? Start with your email, it takes
+        under a minute.
       </p>
 
       {phase === "idle" && (
         <div className="mt-6">
-          <button onClick={start} className="btn-block">
-            SIGN IN WITH ARC →
+          <EmailSignIn onSession={(s, sg) => void onCircleSession(s, sg)} />
+          <div className="mt-5 flex items-center gap-3">
+            <span className="h-px flex-1 bg-white/10" />
+            <span className="mono-label text-white/25">OR</span>
+            <span className="h-px flex-1 bg-white/10" />
+          </div>
+          <button onClick={start} className="btn-block-ghost mt-4 w-full">
+            I ALREADY HAVE A WALLET →
           </button>
           <div className="mt-4 flex flex-wrap gap-2">
             {["arc-chain-status", ...suggestions.map((s) => s.slug)]
@@ -136,11 +177,26 @@ export function TrialCard() {
           </div>
         </div>
       )}
+      {phase === "reauth" && (
+        <div className="mt-6">
+          {err && <p className="mono-label mb-3 text-[#E5484D]">{err.toUpperCase()}</p>}
+          <EmailSignIn onSession={(s, sg) => void onCircleSession(s, sg)} />
+          <button
+            onClick={() => {
+              setErr("");
+              setPhase("claimed");
+            }}
+            className="btn-block-ghost mt-3 w-full"
+          >
+            BACK
+          </button>
+        </div>
+      )}
       {(phase === "connecting" || phase === "claiming") && (
         <div className="mt-6 flex items-center gap-3 text-white/60">
           <Loader2 className="h-4 w-4 animate-spin" />
           <p className="mono-label">
-            {phase === "connecting" ? "OPENING WALLET" : "CLAIMING $1 VOUCHER"}
+            {phase === "connecting" ? "SIGNING YOU IN" : "ADDING YOUR $1 TRIAL CREDIT"}
           </p>
         </div>
       )}
@@ -226,8 +282,14 @@ export function TrialCard() {
       {phase === "error" && (
         <div className="mt-6">
           <p className="mono-label text-[#E5484D]">{err.toUpperCase()}</p>
-          <button onClick={start} className="btn-block-ghost mt-4">
-            RETRY
+          <button
+            onClick={() => {
+              setErr("");
+              setPhase(wallet ? "claimed" : "idle");
+            }}
+            className="btn-block-ghost mt-4"
+          >
+            BACK
           </button>
         </div>
       )}

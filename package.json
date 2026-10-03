@@ -19,6 +19,8 @@
   "dependencies": {
     "@circle-fin/app-kit": "^1.15.2",
     "@circle-fin/developer-controlled-wallets": "^10.6.0",
+    "@circle-fin/user-controlled-wallets": "10.8.1",
+    "@circle-fin/w3s-pw-web-sdk": "1.1.11",
     "@hono/node-server": "^1.14.3",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
