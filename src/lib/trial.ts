@@ -12,9 +12,38 @@ type Eip1193 = {
   request: (args: { method: string; params?: unknown[] | object }) => Promise<unknown>;
 };
 
+// Signing can come from a browser extension (MetaMask etc.) or from a
+// Circle email wallet. TrialCard picks the source; everything downstream
+// is identical.
+export interface Signers {
+  signTypedData(typedData: unknown): Promise<string>;
+  personalSign(message: string): Promise<string>;
+}
+
 export function getProvider(): Eip1193 | null {
   const w = window as unknown as { ethereum?: Eip1193 };
   return w.ethereum ?? null;
+}
+
+export function extensionSigners(account: `0x${string}`): Signers {
+  return {
+    async signTypedData(typedData) {
+      const eth = getProvider();
+      if (!eth) throw new Error("No wallet found");
+      return (await eth.request({
+        method: "eth_signTypedData_v4",
+        params: [account, JSON.stringify(typedData)],
+      })) as string;
+    },
+    async personalSign(message) {
+      const eth = getProvider();
+      if (!eth) throw new Error("No wallet found");
+      return (await eth.request({
+        method: "personal_sign",
+        params: [message, account],
+      })) as string;
+    },
+  };
 }
 
 export async function connectArc(): Promise<`0x${string}`> {
@@ -50,9 +79,7 @@ function randomNonce(): `0x${string}` {
 }
 
 // Sign a zero-value TransferWithAuthorization and claim the $1 voucher.
-export async function claimVoucher(account: `0x${string}`): Promise<void> {
-  const eth = getProvider();
-  if (!eth) throw new Error("No wallet found");
+export async function claimVoucher(account: `0x${string}`, signers: Signers): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
   const authorization = {
     from: account,
@@ -88,10 +115,7 @@ export async function claimVoucher(account: `0x${string}`): Promise<void> {
     },
     message: authorization,
   };
-  const signature = (await eth.request({
-    method: "eth_signTypedData_v4",
-    params: [account, JSON.stringify(typedData)],
-  })) as string;
+  const signature = await signers.signTypedData(typedData);
 
   const payload = {
     x402Version: 2,
@@ -114,15 +138,11 @@ export async function claimVoucher(account: `0x${string}`): Promise<void> {
 export async function spendTrial(
   account: `0x${string}`,
   slug: string,
-  ask?: string,
+  ask: string | undefined,
+  signers: Signers,
 ): Promise<{ status: number; data: unknown }> {
-  const eth = getProvider();
-  if (!eth) throw new Error("No wallet found");
   const ts = Math.floor(Date.now() / 1000);
-  const sig = (await eth.request({
-    method: "personal_sign",
-    params: [`paygate-trial:${slug}:${ts}`, account],
-  })) as string;
+  const sig = await signers.personalSign(`paygate-trial:${slug}:${ts}`);
   const qs = ask?.trim() ? `?ask=${encodeURIComponent(ask.trim())}` : "";
   const res = await fetch(`/api/x402/${slug}${qs}`, {
     headers: {
