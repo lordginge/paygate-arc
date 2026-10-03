@@ -16,6 +16,9 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@contracts": path.resolve(__dirname, "./contracts"),
+      // w3s-pw-web-sdk only uses jsonwebtoken.decode in the browser; the
+      // real package drags Node crypto into the bundle. Shim is decode-only.
+      jsonwebtoken: path.resolve(__dirname, "./src/lib/jsonwebtoken-shim.ts"),
     },
   },
   envDir: path.resolve(__dirname),

@@ -13,8 +13,8 @@ const CSP = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: https:",
-  "connect-src 'self' https://api.circle.com https://onramp.arc.io https://rpc.mainnet.arc.io https://xdsgayetciytzopnzjab.supabase.co https://api.coingecko.com https://api.binance.com https://api.binance.us https://api1.binance.com",
-  "frame-src https://onramp.arc.io",
+  "connect-src 'self' https://api.circle.com https://pw-auth.circle.com https://onramp.arc.io https://rpc.mainnet.arc.io https://xdsgayetciytzopnzjab.supabase.co https://api.coingecko.com https://api.binance.com https://api.binance.us https://api1.binance.com",
+  "frame-src https://onramp.arc.io https://pw-auth.circle.com",
 ].join("; ");
 
 export default {

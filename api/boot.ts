@@ -7,6 +7,7 @@ import { x402Gateway } from "./x402/gateway";
 import { dataApi } from "./data";
 import { verifyApi } from "./verify";
 import { statusApi } from "./status";
+import { circleUsersApi } from "./circle/users";
 import { onrampSessionHandler } from "./onramp";
 import { GUIDE_PARTS } from "./x402/guide";
 import { loadDotenv } from "./lib/dotenv-safe";
@@ -109,6 +110,7 @@ app.route("/api/x402", x402Gateway);
 app.route("/api/data", dataApi);
 app.route("/api/verify", verifyApi);
 app.route("/api/status", statusApi);
+app.route("/api/circle", circleUsersApi);
 app.post("/api/onramp/sessions", (c) => onrampSessionHandler(c.req.raw));
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({
