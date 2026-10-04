@@ -25,5 +25,20 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        // Heavy libraries get their own cacheable chunks instead of
+        // inflating the entry bundle that every visitor downloads.
+        manualChunks(id: string) {
+          if (!id.includes("node_modules")) return;
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router|scheduler)[\\/]/.test(id))
+            return "vendor-react";
+          if (/[\\/]node_modules[\\/](tanstack|trpc)[\\/]/.test(id))
+            return "vendor-query";
+          if (/[\\/]node_modules[\\/](viem|ox|@noble|@scure|abitype|ws)[\\/]/.test(id))
+            return "vendor-viem";
+        },
+      },
+    },
   },
 });

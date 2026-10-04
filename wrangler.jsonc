@@ -13,7 +13,10 @@
   "assets": {
     "directory": "./dist/public",
     "binding": "ASSETS",
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    // Worker must see every request: it canonicalises http/www to the
+    // apex over https and answers real 404s before assets are served.
+    "run_worker_first": true
   },
   "vars": {
     "ARC_CHAIN_ID": "5042",

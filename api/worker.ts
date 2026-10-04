@@ -17,9 +17,40 @@ const CSP = [
   "frame-src https://onramp.arc.io https://pw-auth.circle.com",
 ].join("; ");
 
+// Canonical host: every other spelling (http, www) permanently redirects so
+// search engines consolidate signals on one origin.
+const CANONICAL_HOST = "paygatex402.com";
+
+// Server-side route allowlist. Anything else extensionless is a genuine 404
+// (assets with a file extension fall through to the assets binding, which
+// answers 404 on its own). Keep in sync with src/App.tsx routes.
+const PAGE_ROUTES = new Set([
+  "/",
+  "/sell",
+  "/docs",
+  "/fund",
+  "/verify",
+  "/status",
+  "/dashboard",
+  "/legal",
+]);
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+
+    // Canonicalise: http -> https, www -> apex. One redirect, no chains.
+    // 308 for non-GET so paid API calls keep method and body.
+    if (
+      url.protocol === "http:" ||
+      url.hostname === `www.${CANONICAL_HOST}`
+    ) {
+      return Response.redirect(
+        `https://${CANONICAL_HOST}${url.pathname}${url.search}`,
+        request.method === "GET" || request.method === "HEAD" ? 301 : 308,
+      );
+    }
+
     if (
       url.pathname.startsWith("/api/") ||
       url.pathname === "/.well-known/x402" ||
@@ -27,10 +58,48 @@ export default {
     ) {
       return app.fetch(request);
     }
+
+    // Real 404s for unknown pages: the SPA fallback would otherwise answer
+    // 200 for every typo, which search engines read as soft 404s.
+    const normalised =
+      url.pathname !== "/" && url.pathname.endsWith("/")
+        ? url.pathname.slice(0, -1)
+        : url.pathname;
+    const looksLikeFile = /\.[a-z0-9]+$/i.test(normalised);
+    if (
+      request.method === "GET" &&
+      !looksLikeFile &&
+      !PAGE_ROUTES.has(normalised)
+    ) {
+      const notFound = await env.ASSETS.fetch(
+        new Request(new URL("/404.html", request.url).toString(), {
+          headers: request.headers,
+        }),
+      );
+      const body = notFound.ok
+        ? notFound.body
+        : "<!doctype html><title>404</title><h1>Not found</h1>";
+      return new Response(body, {
+        status: 404,
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "Content-Security-Policy": CSP,
+          "cache-control": "public, max-age=300",
+        },
+      });
+    }
+
     const res = await env.ASSETS.fetch(request);
     if ((res.headers.get("content-type") ?? "").includes("text/html")) {
       const r = new Response(res.body, res);
       r.headers.set("Content-Security-Policy", CSP);
+      return r;
+    }
+    // Hashed build assets are immutable; let them cache at the edge for a
+    // year. Unhashed files keep the assets binding's default caching.
+    if (url.pathname.startsWith("/assets/")) {
+      const r = new Response(res.body, res);
+      r.headers.set("cache-control", "public, max-age=31536000, immutable");
       return r;
     }
     return res;
