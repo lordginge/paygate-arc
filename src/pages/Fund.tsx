@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { AppKit } from "@circle-fin/app-kit";
+import type { AppKit } from "@circle-fin/app-kit";
 import { SiteHeader } from "@/components/SiteHeader";
-import { Fibres } from "@/components/Fibres";
+import { Suspense, lazy } from "react";
+
+// If the chunk cannot load (offline, blocked), render no background
+// rather than unmounting the page.
+const Fibres = lazy(() =>
+  import("@/components/Fibres")
+    .then((m) => ({ default: m.Fibres }))
+    .catch(() => ({ default: () => null })),
+);
 
 export default function Fund() {
   const [address, setAddress] = useState("");
@@ -10,7 +18,11 @@ export default function Fund() {
   const kitRef = useRef<AppKit | null>(null);
 
   useEffect(() => {
-    kitRef.current = new AppKit();
+    // Heavy SDK: load in the background after first paint, so it is ready
+    // by the time the visitor has typed an address.
+    import("@circle-fin/app-kit").then(({ AppKit: Kit }) => {
+      kitRef.current = new Kit();
+    });
   }, []);
 
   const valid = /^0x[a-fA-F0-9]{40}$/.test(address.trim());
@@ -53,7 +65,9 @@ export default function Fund() {
 
   return (
     <div className="min-h-screen text-white/90">
-      <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
+      <Suspense fallback={null}>
+        <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
+      </Suspense>
       <div className="edge-fade-top" aria-hidden />
       <div className="edge-fade-bottom" aria-hidden />
       <SiteHeader />

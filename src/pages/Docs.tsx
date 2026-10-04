@@ -1,6 +1,14 @@
 import { SiteHeader } from "@/components/SiteHeader";
-import { Fibres } from "@/components/Fibres";
+import { Suspense, lazy } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+// If the chunk cannot load (offline, blocked), render no background
+// rather than unmounting the page.
+const Fibres = lazy(() =>
+  import("@/components/Fibres")
+    .then((m) => ({ default: m.Fibres }))
+    .catch(() => ({ default: () => null })),
+);
 
 function Code({ children }: { children: string }) {
   return (
@@ -13,7 +21,9 @@ function Code({ children }: { children: string }) {
 export default function Docs() {
   return (
     <div className="min-h-screen text-white/90">
-      <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
+      <Suspense fallback={null}>
+        <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
+      </Suspense>
       <SiteHeader />
       <div className="edge-fade-top" aria-hidden />
       <div className="edge-fade-bottom" aria-hidden />
@@ -130,9 +140,9 @@ export default function Docs() {
               The repo ships a buyer script that performs the full 402 flow
               against any listed endpoint using a funded Arc wallet:
             </p>
-            <Code>{`BUYER_PRIVATE_KEY=0x... \\
-PAYGATE_URL=https://<deployment> \\
-SLUG=weather-now \\
+            <Code>{`BUYER_PRIVATE_KEY=0x... \
+PAYGATE_URL=https://<deployment> \
+SLUG=weather-now \
 npx tsx scripts/demo-buyer.ts`}</Code>
           </CardContent>
         </Card>
