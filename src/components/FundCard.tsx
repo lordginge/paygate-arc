@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import type { AppKit } from "@circle-fin/app-kit";
 
 // Prefill the address the visitor is already using on the site (email
 // wallet session or trial wallet), so topping up is one less step.
@@ -11,11 +12,11 @@ function initialAddress(): string {
   }
   return "";
 }
-import { AppKit } from "@circle-fin/app-kit";
 
 // Funding card: buyers put USDC on Arc with a card, Apple Pay or Google Pay
 // via Circle's Onramp widget. The server mints a short-lived session so the
-// Circle API key never reaches the browser.
+// Circle API key never reaches the browser. The App Kit bundle is heavy, so
+// it loads on first click rather than on page load.
 export function FundCard() {
   const [address, setAddress] = useState(initialAddress);
   const [status, setStatus] = useState("");
@@ -26,7 +27,10 @@ export function FundCard() {
 
   async function start() {
     if (!valid || busy) return;
-    if (!kitRef.current) kitRef.current = new AppKit();
+    if (!kitRef.current) {
+      const { AppKit: Kit } = await import("@circle-fin/app-kit");
+      kitRef.current = new Kit();
+    }
     const popup = window.open("", "circle-onramp");
     if (!popup) {
       setStatus("POPUP BLOCKED — ALLOW POPUPS AND RETRY");

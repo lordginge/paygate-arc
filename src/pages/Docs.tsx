@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 const Fibres = lazy(() =>
   import("@/components/Fibres")
     .then((m) => ({ default: m.Fibres }))
-    .catch(() => ({ default: () => null })),
+    .catch(() => ({ default: (() => null) as never })),
 );
 
 function Code({ children }: { children: string }) {
