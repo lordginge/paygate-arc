@@ -146,6 +146,7 @@ export const marketplaceRouter = createRouter({
     .input(z.object({ walletAddress: z.string().regex(walletRe) }))
     .query(async ({ input }) => {
       const sellers = await sbSelect<{ id: string }>(
+        "sellers",
         `wallet_address=eq.${input.walletAddress.toLowerCase()}&select=id,display_name`,
       );
       const seller = sellers[0];
