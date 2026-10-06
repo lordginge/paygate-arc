@@ -1,11 +1,44 @@
 import { SiteHeader } from "@/components/SiteHeader";
-import { Fibres } from "@/components/Fibres";
 import { TxTerminal } from "@/components/TxTerminal";
 import { TrialCard } from "@/components/TrialCard";
 import { FundCard } from "@/components/FundCard";
 import { trpc } from "@/providers/trpc";
+import { SITE_ORIGIN } from "@/lib/seo";
 import { ArrowUpRight, Copy, Check, Pause, Play } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
+
+// The WebGPU background weighs more than the rest of the page combined.
+// It loads after first paint and never blocks content.
+// If the chunk cannot load (offline, blocked), render no background
+// rather than unmounting the page.
+const Fibres = lazy(() =>
+  import("@/components/Fibres")
+    .then((m) => ({ default: m.Fibres }))
+    .catch(() => ({ default: (() => null) as never })),
+);
+
+const FAQS: { q: string; a: string }[] = [
+  {
+    q: "What is PayGate x402?",
+    a: "A pay-per-call API marketplace on Arc mainnet. Sellers wrap any HTTPS endpoint with an x402 paywall and set a USDC price. Buyers and AI agents pay per call, with settlement handled on-chain by Circle's Facilitator Service.",
+  },
+  {
+    q: "Do I need crypto experience to use it?",
+    a: "No. Connect any EVM wallet, or buy USDC with a card straight to an Arc address without leaving the site. Email sign-in wallets and Apple Pay / Google Pay funding are rolling out next.",
+  },
+  {
+    q: "How does a paid call actually work?",
+    a: "The first request gets an HTTP 402 with a price. Your client signs an EIP-3009 authorisation for that exact amount and retries. PayGate verifies the signature, delivers the response, and the payment settles on Arc in under a second.",
+  },
+  {
+    q: "What does it cost to try?",
+    a: "Nothing at first. Every new wallet can claim $1 of trial credit, enough for dozens of calls against sandbox-priced endpoints. After that, each endpoint lists its own per-call price in USDC.",
+  },
+  {
+    q: "How do sellers get paid?",
+    a: "Settlement goes straight to the seller's payout wallet on Arc. There is no invoicing cycle and no minimum payout threshold: every call settles individually and can be verified on-chain.",
+  },
+];
 
 interface EndpointRow {
   id: string;
@@ -32,6 +65,26 @@ export default function Home() {
     if (mq.matches) setPlaying(false);
   }, []);
 
+  useEffect(() => {
+    let el = document.getElementById("ld-faq") as HTMLScriptElement | null;
+    if (!el) {
+      el = document.createElement("script");
+      el.type = "application/ld+json";
+      el.id = "ld-faq";
+      document.head.appendChild(el);
+    }
+    el.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: FAQS.map((f) => ({
+        "@type": "Question",
+        name: f.q,
+        acceptedAnswer: { "@type": "Answer", text: f.a },
+      })),
+      isPartOf: { "@type": "WebPage", url: SITE_ORIGIN + "/" },
+    });
+  }, []);
+
   const copy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
     setCopied(key);
@@ -42,7 +95,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen text-white/90 antialiased">
-      <Fibres playing={playing} />
+      <Suspense fallback={null}>
+        <Fibres playing={playing} />
+      </Suspense>
       <div className="edge-fade-top" aria-hidden />
       <div className="edge-fade-bottom" aria-hidden />
       <SiteHeader />
@@ -80,9 +135,8 @@ export default function Home() {
         <p className="mt-8 max-w-xl text-[15px] leading-relaxed text-white/50">
           PayGate wraps any HTTP endpoint with an x402 paywall. Agents and
           developers pay per call in native USDC on Arc, settled in real time
-          by Circle's Facilitator Service. Every call pays. Every payment
-          builds credit: seller float is supplied to Aave V4 as collateral,
-          turning on-chain revenue into working capital.
+          by Circle's Facilitator Service. No accounts, no checkout: every
+          call pays, and every payment is verifiable on-chain.
         </p>
 
         <div className="mt-12 flex flex-wrap gap-4">
@@ -185,8 +239,8 @@ export default function Home() {
               },
               {
                 n: "04",
-                t: "Compound",
-                d: "Seller float is supplied to Aave V4 as USDC collateral. Your payment history becomes your credit line: borrow working capital against future revenue instead of cashing out.",
+                t: "Compound · next",
+                d: "On the roadmap: seller float supplied to Aave V4 as USDC collateral, so payment history becomes a credit line. Not live yet; we will not claim it is until it ships.",
               },
             ].map((s) => (
               <div key={s.n} className="m3e-frame-soft p-8">
@@ -219,12 +273,13 @@ export default function Home() {
           <p className="py-10 mono-label text-white/35">Loading endpoints…</p>
         )}
         {!endpoints.isLoading && rows.length === 0 && (
-          <p className="py-10 text-sm text-white/50">
-            No endpoints yet. Be the first:{" "}
-            <a href="/sell" className="link-line text-[#3B6DFF]">
-              sell an API
-            </a>
-            .
+          <p className="py-10 max-w-2xl text-sm leading-relaxed text-white/50">
+            The live directory loads with the marketplace ledger. Current
+            listings span live crypto prices, order book depth, momentum
+            signals, Arc chain status and Centrifuge RWA pool data, priced per
+            call in USDC. If the list stays empty, the ledger is unreachable
+            right now; the endpoints themselves still answer at
+            /api/x402/&#123;slug&#125;.
           </p>
         )}
 
@@ -289,6 +344,28 @@ export default function Home() {
         </div>
       </section>
 
+      {/* FAQ: visible content, mirrored in FAQPage structured data */}
+      <section className="relative mx-auto max-w-6xl px-6 pb-24">
+        <div className="border-t border-white/10 pt-12">
+          <span className="mono-label text-[#3B6DFF]">Questions</span>
+          <h2 className="m3-headline mt-3 text-2xl text-white">
+            Asked often, answered straight
+          </h2>
+          <div className="mt-8 grid gap-3 md:grid-cols-2">
+            {FAQS.map((f) => (
+              <div key={f.q} className="m3e-frame-soft p-6">
+                <h3 className="text-[15px] font-medium tracking-tight text-white">
+                  {f.q}
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-white/45">
+                  {f.a}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Closing statement */}
       <section className="relative border-t border-white/10">
         <div className="mx-auto max-w-6xl px-6 py-24">
@@ -301,7 +378,7 @@ export default function Home() {
             }}
           >
             Every call pays.{" "}
-            <span className="text-[#3B6DFF]">Every payment builds credit.</span>
+            <span className="text-[#3B6DFF]">Every payment is on-chain.</span>
           </p>
           <div className="mt-10 flex flex-wrap gap-10">
             <a href="/sell" className="mono-label link-line text-white/80">
