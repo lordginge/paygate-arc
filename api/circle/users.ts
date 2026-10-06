@@ -20,10 +20,20 @@ import { callerKey, rateLimited } from "../lib/rateLimit.js";
 
 await loadDotenv();
 
-const { CIRCLE_API_KEY = "", CIRCLE_APP_ID = "" } = process.env;
+const {
+  CIRCLE_API_KEY = "",
+  CIRCLE_APP_ID = "",
+  // OTP emails only flow once SMTP is configured in the Circle Console.
+  // Until the operator sets EMAIL_OTP_LIVE=true after saving SMTP settings,
+  // the site shows the wallet path instead of an email form that cannot
+  // deliver its code.
+  EMAIL_OTP_LIVE = "",
+} = process.env;
 
 export function userWalletsReady(): boolean {
-  return Boolean(CIRCLE_API_KEY && CIRCLE_APP_ID);
+  return Boolean(
+    CIRCLE_API_KEY && CIRCLE_APP_ID && EMAIL_OTP_LIVE.toLowerCase() === "true",
+  );
 }
 
 type UCClient = Awaited<

@@ -34,9 +34,15 @@ export function TxTerminal() {
         if (dead) return;
         setLatestBlock(data.latest);
         setLive(true);
-        const fresh = data.rows.filter((r) => !seenRef.current.has(r.tx));
+        // One tx can emit several USDC logs; dedupe as we fold the batch
+        // in, otherwise same-tx rows slip through when they arrive together.
+        const fresh: FeedRow[] = [];
+        for (const r of data.rows) {
+          if (seenRef.current.has(r.tx)) continue;
+          seenRef.current.add(r.tx);
+          fresh.push(r);
+        }
         if (fresh.length > 0) {
-          for (const r of fresh) seenRef.current.add(r.tx);
           afterRef.current = Math.max(...data.rows.map((r) => r.block));
           setRows((prev) => [...prev, ...fresh].slice(-40));
         } else if (afterRef.current === 0) {
