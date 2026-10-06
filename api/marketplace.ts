@@ -2,6 +2,7 @@ import { z } from "zod";
 import { createRouter, publicQuery } from "./middleware";
 import { sbSelect, sbInsert, sbUpsert } from "./lib/supabase";
 import { verifyWalletProof } from "./lib/authz";
+import { assertSafeUpstreamUrl, UnsafeUpstreamError } from "./lib/ssrf";
 import { ARC_NETWORK, x402Configured, TREASURY_ADDRESS } from "./x402/config";
 import {
   walletsReady,
@@ -108,6 +109,18 @@ export const marketplaceRouter = createRouter({
       const seller = sellers[0];
       if (!seller) throw new Error("Register as a seller first");
 
+      // SSRF gate at the edge: upstreams must be public https hosts on 443
+      // resolving to public IPs only. The gateway re-validates at fetch time,
+      // so a later DNS change to a private range still cannot be fetched.
+      try {
+        await assertSafeUpstreamUrl(input.upstreamUrl);
+      } catch (e) {
+        if (e instanceof UnsafeUpstreamError) {
+          throw new Error(`Upstream URL rejected: ${e.message}`);
+        }
+        throw e;
+      }
+
       const rows = await sbInsert("endpoints", {
         seller_id: seller.id,
         slug: input.slug,
@@ -133,7 +146,6 @@ export const marketplaceRouter = createRouter({
     .input(z.object({ walletAddress: z.string().regex(walletRe) }))
     .query(async ({ input }) => {
       const sellers = await sbSelect<{ id: string }>(
-        "sellers",
         `wallet_address=eq.${input.walletAddress.toLowerCase()}&select=id,display_name`,
       );
       const seller = sellers[0];
