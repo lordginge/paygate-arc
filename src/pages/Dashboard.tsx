@@ -1,5 +1,4 @@
 import { SiteHeader } from "@/components/SiteHeader";
-import { Fibres } from "@/components/Fibres";
 import { trpc } from "@/providers/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,8 +12,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ExternalLink } from "lucide-react";
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import { signWalletProof } from "@/lib/proof";
+
+// If the chunk cannot load (offline, blocked), render no background
+// rather than unmounting the page.
+const Fibres = lazy(() =>
+  import("@/components/Fibres")
+    .then((m) => ({ default: m.Fibres }))
+    .catch(() => ({ default: (() => null) as never })),
+);
 
 interface PaymentRow {
   id: string;
@@ -60,7 +67,9 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen text-white/90">
-      <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
+      <Suspense fallback={null}>
+        <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
+      </Suspense>
       <div className="edge-fade-top" aria-hidden />
       <div className="edge-fade-bottom" aria-hidden />
       <SiteHeader />

@@ -8,7 +8,7 @@ import { Suspense, lazy } from "react";
 const Fibres = lazy(() =>
   import("@/components/Fibres")
     .then((m) => ({ default: m.Fibres }))
-    .catch(() => ({ default: () => null })),
+    .catch(() => ({ default: (() => null) as never })),
 );
 
 export default function Fund() {

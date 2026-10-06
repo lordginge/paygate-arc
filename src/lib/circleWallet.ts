@@ -64,12 +64,16 @@ export function clearCircleSession(): void {
   }
 }
 
-export async function fetchCircleConfig(): Promise<{ ready: boolean; appId: string | null }> {
+export async function fetchCircleConfig(): Promise<{ ready: boolean; appId: string | null } | null> {
+  // On failure we resolve to null so callers keep their initial render;
+  // a hard {ready:false} here would flash a "coming soon" notice on
+  // transient network errors and diverge from the prerendered HTML.
   try {
     const res = await fetch("/api/circle/config");
+    if (!res.ok) return null;
     return (await res.json()) as { ready: boolean; appId: string | null };
   } catch {
-    return { ready: false, appId: null };
+    return null;
   }
 }
 
@@ -121,7 +125,6 @@ export async function requestEmailOtp(
       deviceToken: body.deviceToken,
       deviceEncryptionKey: body.deviceEncryptionKey,
       otpToken: body.otpToken,
-      email: { email },
     },
   });
   return {
