@@ -141,9 +141,8 @@ export function TrialCard() {
         Ask your own call. First one is on us.
       </h3>
       <p className="mt-2 text-sm leading-relaxed text-white/45">
-        Sign in to claim $1 of trial credit, pick an endpoint, and watch a real
-        payment settle on Arc. New to crypto? Start with your email, it takes
-        under a minute.
+        Sign in to claim $1 of trial credit, pick an endpoint, and watch a
+        real payment settle on Arc in under a second.
       </p>
 
       {phase === "idle" && (
