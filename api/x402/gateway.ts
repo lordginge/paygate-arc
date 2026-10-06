@@ -23,6 +23,7 @@ import {
   type PaymentRequirements,
 } from "./facilitator";
 import type { Payee } from "./proof";
+import { assertSafeUpstreamUrl } from "../lib/ssrf";
 import { keccak256, toBytes } from "viem";
 
 interface EndpointRow {
@@ -314,6 +315,11 @@ x402Gateway.all("/:slug", async (c) => {
     "x-trial-wallet",
     "x-trial-ts",
     "x-trial-sig",
+    // Buyer credentials must never reach a seller's upstream: the gateway
+    // proxies arbitrary registered hosts, so an Authorization header or
+    // cookie aimed at PayGate would be handed to whoever registered the URL.
+    "authorization",
+    "cookie",
   ]);
   async function fetchUpstream(): Promise<Response> {
     const fwdHeaders = new Headers();
@@ -344,14 +350,21 @@ x402Gateway.all("/:slug", async (c) => {
         body,
       });
     }
-    const upstreamUrl = new URL(endpoint.upstream_url);
+    // SSRF guard: seller-registered upstreams must be public https hosts on
+    // 443 resolving to public IPs only. Registration validates too, but URLs
+    // pre-dating validation and DNS changes both make a fetch-time check
+    // mandatory. Throws UnsafeUpstreamError -> caught below as 502.
+    const upstreamUrl = await assertSafeUpstreamUrl(endpoint.upstream_url);
     resourceUrl.searchParams.forEach((v, k) =>
       upstreamUrl.searchParams.append(k, v),
     );
+    // redirect:"error" so a 30x to an internal host cannot bypass the
+    // validation above (we never follow, we fail).
     return fetch(upstreamUrl, {
       method: c.req.method,
       headers: fwdHeaders,
       body,
+      redirect: "error",
     });
   }
 
@@ -371,6 +384,22 @@ x402Gateway.all("/:slug", async (c) => {
   const shouldServe =
     paymentHeader || (trialWallet && trialSig && trialTs);
   if (shouldServe) {
+    // Probe amplification damping: the probe fires on header presence alone
+    // (before signature verification), so a caller can make the Worker fetch
+    // a seller's upstream for free. Per-isolate fixed window per slug per
+    // caller; paid callers are unaffected below this rate.
+    const { callerKey, rateLimited } = await import("../lib/rateLimit");
+    const rl = rateLimited(callerKey(c.req.raw, `probe:${slug}`), {
+      limit: 60,
+      windowMs: 60_000,
+    });
+    if (rl.limited) {
+      return c.json(
+        { error: "Too many requests, retry later" },
+        429,
+        { "Retry-After": String(rl.retryAfterSec) },
+      );
+    }
     try {
       upstream = await fetchUpstream();
     } catch (e) {
@@ -381,12 +410,14 @@ x402Gateway.all("/:slug", async (c) => {
       );
     }
     if (!upstream.ok) {
-      const detail = await upstream.text().catch(() => "");
+      // Do NOT echo the upstream body: the probe fires on any request with a
+      // payment-shaped header, before any signature check, so relaying body
+      // content would make the gateway a read oracle for whatever URL a
+      // seller registered.
       return c.json(
         {
           error: "Upstream endpoint failed; payment NOT taken",
           upstreamStatus: upstream.status,
-          detail: detail.slice(0, 200),
         },
         502,
       );
