@@ -1,5 +1,13 @@
 import { SiteHeader } from "@/components/SiteHeader";
-import { Fibres } from "@/components/Fibres";
+import { Suspense, lazy } from "react";
+
+// If the chunk cannot load (offline, blocked), render no background
+// rather than unmounting the page.
+const Fibres = lazy(() =>
+  import("@/components/Fibres")
+    .then((m) => ({ default: m.Fibres }))
+    .catch(() => ({ default: (() => null) as never })),
+);
 import { useEffect, useState } from "react";
 
 type StatusBody = {
@@ -42,7 +50,9 @@ export default function Status() {
 
   return (
     <div className="min-h-screen text-white/90">
-      <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
+      <Suspense fallback={null}>
+        <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
+      </Suspense>
       <div className="edge-fade-top" aria-hidden />
       <div className="edge-fade-bottom" aria-hidden />
       <SiteHeader />
