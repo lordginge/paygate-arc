@@ -209,8 +209,7 @@ function extractPaymentIdentifier(payload: unknown): string | null {
   const info = (payload as { extensions?: Record<string, { info?: { id?: unknown } }> })
     ?.extensions?.["payment-identifier"]?.info;
   const id = info?.id;
-  if (typeof id !== "string") return null;
-  if (id.length < 16 || id.length > 128 || !PAYMENT_ID_PATTERN.test(id)) return null;
+  if (typeof id !== "string" || id.length < 16 || id.length > 128 || !PAYMENT_ID_PATTERN.test(id)) return null;
   return id;
 }
 
@@ -323,12 +322,17 @@ x402Gateway.all("/:slug", async (c) => {
     });
     fwdHeaders.delete("x-paygate-internal");
     const internalKey = process.env.INTERNAL_API_KEY ?? "";
-    if (internalKey) fwdHeaders.set("x-paygate-internal", internalKey);
 
     const hasBody = !["GET", "HEAD"].includes(c.req.method);
     const body = hasBody ? await c.req.raw.arrayBuffer() : undefined;
 
     if (endpoint.upstream_url.startsWith("/")) {
+      // SECURITY: the internal key is stamped ONLY on in-process dispatch.
+      // It is the sole guard on the paywalled first-party routes under
+      // /api/data/* (see api/data.ts), so it must never leave this Worker.
+      // Attaching it to the external branch below would hand it to any
+      // seller who points upstream_url at a host they control.
+      if (internalKey) fwdHeaders.set("x-paygate-internal", internalKey);
       const { dataApi } = await import("../data");
       const u = new URL(endpoint.upstream_url, "http://internal");
       resourceUrl.searchParams.forEach((v, k) => u.searchParams.append(k, v));
