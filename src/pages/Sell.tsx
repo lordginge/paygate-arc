@@ -1,5 +1,13 @@
 import { SiteHeader } from "@/components/SiteHeader";
-import { Fibres } from "@/components/Fibres";
+import { Suspense, lazy } from "react";
+
+// If the chunk cannot load (offline, blocked), render no background
+// rather than unmounting the page.
+const Fibres = lazy(() =>
+  import("@/components/Fibres")
+    .then((m) => ({ default: m.Fibres }))
+    .catch(() => ({ default: (() => null) as never })),
+);
 import { trpc } from "@/providers/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,46 +17,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { connectArc } from "@/lib/trial";
 import { signWalletProof } from "@/lib/proof";
-
-const templates = [
-  {
-    label: "Data lookup",
-    slug: "weather-now",
-    name: "Live weather lookup",
-    category: "data",
-    upstreamUrl: "https://api.example.com/weather",
-    price: "0.01",
-    description: "Returns current weather for a city or coordinate pair.",
-  },
-  {
-    label: "AI answer",
-    slug: "ask-brief",
-    name: "One-shot AI brief",
-    category: "ai",
-    upstreamUrl: "https://api.example.com/ask",
-    price: "0.05",
-    description: "Takes ?ask= and returns a short sourced answer.",
-  },
-  {
-    label: "Fresh scrape",
-    slug: "page-signal",
-    name: "Page signal scrape",
-    category: "web",
-    upstreamUrl: "https://api.example.com/scrape",
-    price: "0.02",
-    description: "Fetches one public page and returns title, links and summary.",
-  },
-  {
-    label: "Proof of call",
-    slug: "proof-of-call",
-    name: "Timestamped proof of call",
-    category: "social",
-    upstreamUrl: "https://api.example.com/proof-of-call",
-    price: "0.03",
-    description:
-      "Locks one market call by hash and timestamp. One winner or loser post only, with explicit consent.",
-  },
-];
 
 export default function Sell() {
   const [wallet, setWallet] = useState("");
@@ -99,16 +67,6 @@ export default function Sell() {
     onError: (e) => setMsg(`Error: ${e.message}`),
   });
 
-  function applyTemplate(t: (typeof templates)[number]) {
-    setSlug(t.slug);
-    setName(t.name);
-    setCategory(t.category);
-    setUpstreamUrl(t.upstreamUrl);
-    setPrice(t.price);
-    setDescription(t.description);
-    setMsg(`Template loaded: ${t.label}. Replace the upstream URL with yours.`);
-  }
-
   async function publishWithProof() {
     try {
       const account = await connectArc();
@@ -131,7 +89,9 @@ export default function Sell() {
 
   return (
     <div className="min-h-screen text-white/90">
-      <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
+      <Suspense fallback={null}>
+        <Fibres playing={!window.matchMedia("(prefers-reduced-motion: reduce)").matches} />
+      </Suspense>
       <div className="edge-fade-top" aria-hidden />
       <div className="edge-fade-bottom" aria-hidden />
       <SiteHeader />
@@ -145,8 +105,7 @@ export default function Sell() {
           You bring one HTTPS endpoint. PayGate turns it into a paid x402 call:
           buyer signs USDC on Arc, payment verifies, then PayGate forwards the
           request to your upstream. If it does not pay, it never reaches you.
-          The slug works a bit like a domain name for one payable action:
-          memorable, ownable and priced.
+          You get a short payable link to share anywhere.
         </p>
 
         <div className="mt-10 grid gap-4 md:grid-cols-3">
@@ -211,21 +170,9 @@ export default function Sell() {
               <CardTitle className="text-white">2. Name your payable call</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                {templates.map((t) => (
-                  <button
-                    key={t.slug}
-                    type="button"
-                    onClick={() => applyTemplate(t)}
-                    className="m3e-chip text-white/60 hover:text-white"
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-white/80">Slug</Label>
+                  <Label className="text-white/80">Link name</Label>
                   <Input
                     value={slug}
                     onChange={(e) => setSlug(e.target.value.toLowerCase())}
@@ -298,12 +245,10 @@ export default function Sell() {
                 />
               </div>
               <p className="text-xs leading-relaxed text-white/35">
-                Keep secrets in your upstream service. Stop loss is a reminder
-                for your own upstream cap today; PayGate blocks unpaid traffic,
-                while your service enforces spend limits. Social posting is
-                possible only with explicit social login and user-granted
-                posting access, so treat it as a separate consent flow, not a
-                quick listing template. Never put tokens in the listing.
+                Keep secrets in your upstream service; never put tokens in the
+                listing. Stop loss is a reminder for your own upstream cap:
+                PayGate blocks unpaid traffic, while your service enforces
+                spend limits.
               </p>
               <Button
                 className="btn-block w-full"
