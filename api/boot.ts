@@ -98,14 +98,12 @@ app.get("/openapi.json", (c) => {
     Object.entries(rawPaths).map(([route, ops]) => {
       const op = ((ops.get ?? ops.post) ?? {}) as Record<string, unknown>;
       const x = (op["x-x402"] ?? {}) as Record<string, string>;
-      const usd = x.amount ? (Number(x.amount) / 1_000_000).toString() : "0";
+      const usd = x.amount ? (Number(x.amount) / 1_000_000).toFixed(6) : "0.000000";
       const withPrice = {
         ...op,
         "x-payment-info": {
           protocols: ["x402"],
-          pricingMode: "fixed",
-          price: usd,
-          currency: "USD",
+          price: { mode: "fixed", currency: "USDC", amount: usd },
         },
       };
       return [route, ops.get ? { get: withPrice } : { post: withPrice }];

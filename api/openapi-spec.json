@@ -89,13 +89,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.02",
-     "priceAmount": "0.02",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.020000"
+     }
     }
    }
   },
@@ -156,13 +154,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.002",
-     "priceAmount": "0.002",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.002000"
+     }
     }
    }
   },
@@ -223,13 +219,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.003",
-     "priceAmount": "0.003",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.003000"
+     }
     }
    }
   },
@@ -290,13 +284,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.001",
-     "priceAmount": "0.001",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.001000"
+     }
     }
    }
   },
@@ -358,13 +350,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.01",
-     "priceAmount": "0.01",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.010000"
+     }
     }
    }
   },
@@ -426,13 +416,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.01",
-     "priceAmount": "0.01",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.010000"
+     }
     }
    }
   },
@@ -494,13 +482,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.01",
-     "priceAmount": "0.01",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.010000"
+     }
     }
    }
   },
@@ -562,13 +548,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.01",
-     "priceAmount": "0.01",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.010000"
+     }
     }
    }
   },
@@ -630,13 +614,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.01",
-     "priceAmount": "0.01",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.010000"
+     }
     }
    }
   },
@@ -698,13 +680,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.01",
-     "priceAmount": "0.01",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.010000"
+     }
     }
    }
   },
@@ -766,13 +746,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.01",
-     "priceAmount": "0.01",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.010000"
+     }
     }
    }
   },
@@ -834,13 +812,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.01",
-     "priceAmount": "0.01",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.010000"
+     }
     }
    }
   },
@@ -901,13 +877,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.001",
-     "priceAmount": "0.001",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.001000"
+     }
     }
    }
   },
@@ -968,13 +942,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.01",
-     "priceAmount": "0.01",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.010000"
+     }
     }
    }
   },
@@ -1035,13 +1007,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.002",
-     "priceAmount": "0.002",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.002000"
+     }
     }
    }
   },
@@ -1103,13 +1073,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.002",
-     "priceAmount": "0.002",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.002000"
+     }
     }
    }
   },
@@ -1171,13 +1139,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.005",
-     "priceAmount": "0.005",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.005000"
+     }
     }
    }
   },
@@ -1239,13 +1205,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.0005",
-     "priceAmount": "0.0005",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.000500"
+     }
     }
    }
   },
@@ -1307,13 +1271,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.001",
-     "priceAmount": "0.001",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.001000"
+     }
     }
    }
   },
@@ -1375,13 +1337,11 @@
      "protocols": [
       "x402"
      ],
-     "pricingMode": "fixed",
-     "price": "0.001",
-     "priceAmount": "0.001",
-     "priceCurrency": "USD",
-     "currency": "USD",
-     "network": "eip155:5042",
-     "asset": "0x3600000000000000000000000000000000000000"
+     "price": {
+      "mode": "fixed",
+      "currency": "USDC",
+      "amount": "0.001000"
+     }
     }
    }
   }
