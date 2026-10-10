@@ -96,4 +96,21 @@ app.get("/openapi.json", (c) => {
     { "Cache-Control": "public, max-age=300", "Access-Control-Allow-Origin": "*" },
   );
 });
+
+app.route("/api/x402", x402Gateway);
+app.route("/api/data", dataApi);
+app.route("/api/verify", verifyApi);
+app.route("/api/status", statusApi);
+app.route("/api/circle", circleUsersApi);
+app.post("/api/onramp/sessions", (c) => onrampSessionHandler(c.req.raw));
+app.use("/api/trpc/*", async (c) => {
+  return fetchRequestHandler({
+    endpoint: "/api/trpc",
+    req: c.req.raw,
+    router: appRouter,
+    createContext,
+  });
+});
+app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
+
 export default app;
