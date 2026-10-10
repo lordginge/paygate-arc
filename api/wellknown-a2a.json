@@ -1,0 +1,38 @@
+{
+  "protocol": "a2a",
+  "version": "1.0",
+  "name": "PayGate x402",
+  "description": "Pay-per-call API marketplace on Arc mainnet. Sellers wrap HTTPS endpoints with x402 paywalls priced in USDC; Circle's Facilitator Service settles every call verify-then-settle; every settled fill is stamped on-chain for public verification.",
+  "url": "https://paygatex402.com",
+  "docs": "https://paygatex402.com/docs",
+  "openapi": "https://paygatex402.com/openapi.json",
+  "skills": [
+    {
+      "id": "x402-marketplace-browse",
+      "name": "Browse PayGate endpoints",
+      "description": "List all 20 paid endpoints (market data, RWA, web extraction, infrastructure) with per-call USDC pricing.",
+      "examples": ["show me paygate endpoints", "find crypto price APIs under $0.005", "centrifuge RWA data"]
+    },
+    {
+      "id": "x402-pay-call",
+      "name": "Pay for a call",
+      "description": "POST/GET any /api/x402/<slug> endpoint; unpaid returns HTTP 402 with PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042); sign and retry with Payment-Signature header.",
+      "examples": ["call crypto-prices for BTC and ETH", "extract text from example.com"]
+    }
+  ],
+  "provider": {
+    "organization": "PayGate x402",
+    "url": "https://paygatex402.com"
+  },
+  "authentication": {
+    "schemes": ["x402"],
+    "description": "Payment is authentication: per-call USDC settlement via Circle Facilitator on eip155:5042. No API keys, no accounts."
+  },
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "x402Version": 2,
+    "networks": ["eip155:5042"],
+    "asset": "0x3600000000000000000000000000000000000000"
+  }
+}

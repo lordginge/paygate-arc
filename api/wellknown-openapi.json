@@ -1,0 +1,10 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PayGate x402 Marketplace API",
+    "version": "1.0.0",
+    "description": "Pay-per-call API marketplace on Arc mainnet. Every endpoint is x402 v2 compliant: unpaid requests return HTTP 402 with a PAYMENT-REQUIRED challenge; callers sign an EIP-3009 USDC authorization and retry with a Payment-Signature header; settlement runs through Circle's Facilitator Service; every settled fill is stamped on-chain for public verification."
+  },
+  "servers": [{ "url": "https://paygatex402.com" }],
+  "paths": { "$ref": "https://paygatex402.com/openapi.json#/paths" }
+}

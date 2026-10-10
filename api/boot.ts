@@ -69,6 +69,27 @@ app.get("/.well-known/x402", (c) => {
 // categories); the flat x-payment-info shape is derived from it here so
 // both consumers get consistent, complete data from one source.
 import fullSpec from "./openapi-spec.json";
+import a2aCard from "./wellknown-a2a.json";
+
+// Agent discovery surfaces (probed by Circle tooling, a2a clients, and
+// x402 registries). openapi.json stays the canonical full spec; the
+// .well-known variants are discovery aliases pointing agents at it.
+app.get("/.well-known/openapi.json", (c) => c.redirect("https://paygatex402.com/openapi.json", 302));
+app.get("/.well-known/ai-plugin.json", (c) =>
+  c.json({
+    schema_version: "v1",
+    name_for_model: "paygate_x402",
+    name_for_human: "PayGate x402",
+    description_for_model: "Pay-per-call API marketplace on Arc mainnet. 20 x402 v2 endpoints (market data, RWA, web extraction, infrastructure) priced 0.0005-0.02 USDC per call, settled via Circle Facilitator (EIP-3009) on eip155:5042.",
+    description_for_human: "Pay per call API marketplace - USDC on Arc.",
+    auth: { type: "none" },
+    api: { type: "openapi", url: "https://paygatex402.com/openapi.json", has_user_authentication: false },
+    logo_url: "https://paygatex402.com/favicon.ico",
+    contact_email: "lordginge82@gmail.com",
+    legal_info_url: "https://paygatex402.com/legal",
+  })
+);
+app.get("/.well-known/a2a.json", (c) => c.json(a2aCard as Record<string, unknown>));
 
 app.get("/openapi.json", (c) => {
   const spec = fullSpec as Record<string, unknown>;
