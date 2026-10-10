@@ -1,1146 +1,1390 @@
-﻿{
-    "openapi":  "3.0.3",
-    "info":  {
-                 "title":  "PayGate x402 Marketplace API",
-                 "version":  "1.0.0",
-                 "description":  "Pay-per-call API marketplace on Arc mainnet. Every endpoint is x402 v2 compliant: unpaid requests return HTTP 402 with a PAYMENT-REQUIRED challenge; callers sign an EIP-3009 USDC authorization and retry with a Payment-Signature header; settlement runs through Circle\u0027s Facilitator Service; every settled fill is stamped on-chain for public verification.",
-                 "contact":  {
-                                 "name":  "PayGate x402",
-                                 "url":  "https://paygatex402.com"
-                             }
-             },
-    "servers":  [
-                    {
-                        "url":  "https://paygatex402.com"
-                    }
-                ],
-    "x-provider":  {
-                       "name":  "PayGate x402",
-                       "website":  "https://paygatex402.com",
-                       "docsUrl":  "https://paygatex402.com/docs",
-                       "payoutWallet":  "0x57607f9296385571CbD8Df14D8728B7C839743D",
-                       "category":  "INFRASTRUCTURE",
-                       "tags":  [
-                                    "x402",
-                                    "arc",
-                                    "usdc",
-                                    "pay-per-call",
-                                    "marketplace"
-                                ]
-                   },
-    "paths":  {
-                  "/api/x402/extractr-arc":  {
-                                                 "post":  {
-                                                              "summary":  "POST a URL, get back the page\u0027s clean readable text, title, word count, and an extractive summary as JSON.",
-                                                              "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.02 USDC per call. Docs: https://paygatex402.com/docs",
-                                                              "operationId":  "extractr-arc",
-                                                              "tags":  [
-                                                                           "x402",
-                                                                           "web_search_research",
-                                                                           "usdc"
-                                                                       ],
-                                                              "x-x402":  {
-                                                                             "network":  "eip155:5042",
-                                                                             "asset":  "0x3600000000000000000000000000000000000000",
-                                                                             "scheme":  "exact",
-                                                                             "amount":  "20000",
-                                                                             "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                             "assetTransferMethod":  "eip3009",
-                                                                             "facilitator":  "circle",
-                                                                             "category":  "WEB_SEARCH_RESEARCH"
-                                                                         },
-                                                              "responses":  {
-                                                                                "402":  {
-                                                                                            "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                            "headers":  {
-                                                                                                            "PAYMENT-REQUIRED":  {
-                                                                                                                                     "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                     "schema":  {
-                                                                                                                                                    "type":  "string"
-                                                                                                                                                }
-                                                                                                                                 }
-                                                                                                        }
-                                                                                        },
-                                                                                "200":  {
-                                                                                            "description":  "Paid response",
-                                                                                            "content":  {
-                                                                                                            "application/json":  {
-                                                                                                                                     "schema":  {
-                                                                                                                                                    "type":  "object"
-                                                                                                                                                }
-                                                                                                                                 }
-                                                                                                        }
-                                                                                        }
-                                                                            },
-                                                              "requestBody":  {
-                                                                                  "required":  true,
-                                                                                  "content":  {
-                                                                                                  "application/json":  {
-                                                                                                                           "schema":  {
-                                                                                                                                          "type":  "object"
-                                                                                                                                      }
-                                                                                                                       }
-                                                                                              }
-                                                                              }
-                                                          }
-                                             },
-                  "/api/x402/centrifuge-rwa-pools":  {
-                                                         "post":  {
-                                                                      "summary":  "Every active Centrifuge pool (JAAA, JTRSY and more) with per-token NAV price, supply and TVL in USD, sorted by size. Sourced live from Centrifuge\u0027s public protocol indexer across their 9-chain deployment.",
-                                                                      "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.002 USDC per call. Docs: https://paygatex402.com/docs",
-                                                                      "operationId":  "centrifuge-rwa-pools",
-                                                                      "tags":  [
-                                                                                   "x402",
-                                                                                   "financial_analysis",
-                                                                                   "usdc"
-                                                                               ],
-                                                                      "x-x402":  {
-                                                                                     "network":  "eip155:5042",
-                                                                                     "asset":  "0x3600000000000000000000000000000000000000",
-                                                                                     "scheme":  "exact",
-                                                                                     "amount":  "2000",
-                                                                                     "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                                     "assetTransferMethod":  "eip3009",
-                                                                                     "facilitator":  "circle",
-                                                                                     "category":  "FINANCIAL_ANALYSIS"
-                                                                                 },
-                                                                      "responses":  {
-                                                                                        "402":  {
-                                                                                                    "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                                    "headers":  {
-                                                                                                                    "PAYMENT-REQUIRED":  {
-                                                                                                                                             "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                             "schema":  {
-                                                                                                                                                            "type":  "string"
-                                                                                                                                                        }
-                                                                                                                                         }
-                                                                                                                }
-                                                                                                },
-                                                                                        "200":  {
-                                                                                                    "description":  "Paid response",
-                                                                                                    "content":  {
-                                                                                                                    "application/json":  {
-                                                                                                                                             "schema":  {
-                                                                                                                                                            "type":  "object"
-                                                                                                                                                        }
-                                                                                                                                         }
-                                                                                                                }
-                                                                                                }
-                                                                                    },
-                                                                      "requestBody":  {
-                                                                                          "required":  true,
-                                                                                          "content":  {
-                                                                                                          "application/json":  {
-                                                                                                                                   "schema":  {
-                                                                                                                                                  "type":  "object"
-                                                                                                                                              }
-                                                                                                                               }
-                                                                                                      }
-                                                                                      }
-                                                                  }
-                                                     },
-                  "/api/x402/centrifuge-rwa-pool":  {
-                                                        "post":  {
-                                                                     "summary":  "Single Centrifuge pool by numeric ID: share-class tokens with NAV and TVL, plus every vault deployment per chain with asset address and link status. Pass the pool ID as the trailing path segment.",
-                                                                     "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.003 USDC per call. Docs: https://paygatex402.com/docs",
-                                                                     "operationId":  "centrifuge-rwa-pool",
-                                                                     "tags":  [
-                                                                                  "x402",
-                                                                                  "financial_analysis",
-                                                                                  "usdc"
-                                                                              ],
-                                                                     "x-x402":  {
-                                                                                    "network":  "eip155:5042",
-                                                                                    "asset":  "0x3600000000000000000000000000000000000000",
-                                                                                    "scheme":  "exact",
-                                                                                    "amount":  "3000",
-                                                                                    "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                                    "assetTransferMethod":  "eip3009",
-                                                                                    "facilitator":  "circle",
-                                                                                    "category":  "FINANCIAL_ANALYSIS"
-                                                                                },
-                                                                     "responses":  {
-                                                                                       "402":  {
-                                                                                                   "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                                   "headers":  {
-                                                                                                                   "PAYMENT-REQUIRED":  {
-                                                                                                                                            "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                            "schema":  {
-                                                                                                                                                           "type":  "string"
-                                                                                                                                                       }
-                                                                                                                                        }
-                                                                                                               }
-                                                                                               },
-                                                                                       "200":  {
-                                                                                                   "description":  "Paid response",
-                                                                                                   "content":  {
-                                                                                                                   "application/json":  {
-                                                                                                                                            "schema":  {
-                                                                                                                                                           "type":  "object"
-                                                                                                                                                       }
-                                                                                                                                        }
-                                                                                                               }
-                                                                                               }
-                                                                                   },
-                                                                     "requestBody":  {
-                                                                                         "required":  true,
-                                                                                         "content":  {
-                                                                                                         "application/json":  {
-                                                                                                                                  "schema":  {
-                                                                                                                                                 "type":  "object"
-                                                                                                                                             }
-                                                                                                                              }
-                                                                                                     }
-                                                                                     }
-                                                                 }
-                                                    },
-                  "/api/x402/centrifuge-rwa-tokens":  {
-                                                          "post":  {
-                                                                       "summary":  "All Centrifuge share-class tokens with current NAV price, circulating supply and TVL in USD. Covers deJAAA, deJTRSY, JTRSY and every other active share class.",
-                                                                       "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.001 USDC per call. Docs: https://paygatex402.com/docs",
-                                                                       "operationId":  "centrifuge-rwa-tokens",
-                                                                       "tags":  [
-                                                                                    "x402",
-                                                                                    "financial_analysis",
-                                                                                    "usdc"
-                                                                                ],
-                                                                       "x-x402":  {
-                                                                                      "network":  "eip155:5042",
-                                                                                      "asset":  "0x3600000000000000000000000000000000000000",
-                                                                                      "scheme":  "exact",
-                                                                                      "amount":  "1000",
-                                                                                      "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                                      "assetTransferMethod":  "eip3009",
-                                                                                      "facilitator":  "circle",
-                                                                                      "category":  "FINANCIAL_ANALYSIS"
-                                                                                  },
-                                                                       "responses":  {
-                                                                                         "402":  {
-                                                                                                     "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                                     "headers":  {
-                                                                                                                     "PAYMENT-REQUIRED":  {
-                                                                                                                                              "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                              "schema":  {
-                                                                                                                                                             "type":  "string"
-                                                                                                                                                         }
-                                                                                                                                          }
-                                                                                                                 }
-                                                                                                 },
-                                                                                         "200":  {
-                                                                                                     "description":  "Paid response",
-                                                                                                     "content":  {
-                                                                                                                     "application/json":  {
-                                                                                                                                              "schema":  {
-                                                                                                                                                             "type":  "object"
-                                                                                                                                                         }
-                                                                                                                                          }
-                                                                                                                 }
-                                                                                                 }
-                                                                                     },
-                                                                       "requestBody":  {
-                                                                                           "required":  true,
-                                                                                           "content":  {
-                                                                                                           "application/json":  {
-                                                                                                                                    "schema":  {
-                                                                                                                                                   "type":  "object"
-                                                                                                                                               }
-                                                                                                                                }
-                                                                                                       }
-                                                                                       }
-                                                                   }
-                                                      },
-                  "/api/x402/guide-1-moving-pieces":  {
-                                                          "get":  {
-                                                                      "summary":  "What an x402 resource server is, and the Arc + Circle facilitator map you are building on.",
-                                                                      "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.01 USDC per call. Docs: https://paygatex402.com/docs",
-                                                                      "operationId":  "guide-1-moving-pieces",
-                                                                      "tags":  [
-                                                                                   "x402",
-                                                                                   "infrastructure",
-                                                                                   "usdc"
-                                                                               ],
-                                                                      "x-x402":  {
-                                                                                     "network":  "eip155:5042",
-                                                                                     "asset":  "0x3600000000000000000000000000000000000000",
-                                                                                     "scheme":  "exact",
-                                                                                     "amount":  "10000",
-                                                                                     "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                                     "assetTransferMethod":  "eip3009",
-                                                                                     "facilitator":  "circle",
-                                                                                     "category":  "INFRASTRUCTURE"
-                                                                                 },
-                                                                      "responses":  {
-                                                                                        "402":  {
-                                                                                                    "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                                    "headers":  {
-                                                                                                                    "PAYMENT-REQUIRED":  {
-                                                                                                                                             "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                             "schema":  {
-                                                                                                                                                            "type":  "string"
-                                                                                                                                                        }
-                                                                                                                                         }
-                                                                                                                }
-                                                                                                },
-                                                                                        "200":  {
-                                                                                                    "description":  "Paid response",
-                                                                                                    "content":  {
-                                                                                                                    "application/json":  {
-                                                                                                                                             "schema":  {
-                                                                                                                                                            "type":  "object"
-                                                                                                                                                        }
-                                                                                                                                         }
-                                                                                                                }
-                                                                                                }
-                                                                                    },
-                                                                      "parameters":  [
-                                                                                         {
-                                                                                             "name":  "input",
-                                                                                             "in":  "query",
-                                                                                             "required":  false,
-                                                                                             "schema":  {
-                                                                                                            "type":  "string"
-                                                                                                        },
-                                                                                             "description":  "Endpoint-specific query parameters - see https://paygatex402.com/docs"
-                                                                                         }
-                                                                                     ]
-                                                                  }
-                                                      },
-                  "/api/x402/guide-2-keys-and-wallet":  {
-                                                            "get":  {
-                                                                        "summary":  "Payout addresses, key hygiene, and the setup that keeps revenue safe.",
-                                                                        "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.01 USDC per call. Docs: https://paygatex402.com/docs",
-                                                                        "operationId":  "guide-2-keys-and-wallet",
-                                                                        "tags":  [
-                                                                                     "x402",
-                                                                                     "infrastructure",
-                                                                                     "usdc"
-                                                                                 ],
-                                                                        "x-x402":  {
-                                                                                       "network":  "eip155:5042",
-                                                                                       "asset":  "0x3600000000000000000000000000000000000000",
-                                                                                       "scheme":  "exact",
-                                                                                       "amount":  "10000",
-                                                                                       "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                                       "assetTransferMethod":  "eip3009",
-                                                                                       "facilitator":  "circle",
-                                                                                       "category":  "INFRASTRUCTURE"
-                                                                                   },
-                                                                        "responses":  {
-                                                                                          "402":  {
-                                                                                                      "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                                      "headers":  {
-                                                                                                                      "PAYMENT-REQUIRED":  {
-                                                                                                                                               "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                               "schema":  {
-                                                                                                                                                              "type":  "string"
-                                                                                                                                                          }
-                                                                                                                                           }
-                                                                                                                  }
-                                                                                                  },
-                                                                                          "200":  {
-                                                                                                      "description":  "Paid response",
-                                                                                                      "content":  {
-                                                                                                                      "application/json":  {
-                                                                                                                                               "schema":  {
-                                                                                                                                                              "type":  "object"
-                                                                                                                                                          }
-                                                                                                                                           }
-                                                                                                                  }
-                                                                                                  }
-                                                                                      },
-                                                                        "parameters":  [
-                                                                                           {
-                                                                                               "name":  "input",
-                                                                                               "in":  "query",
-                                                                                               "required":  false,
-                                                                                               "schema":  {
-                                                                                                              "type":  "string"
-                                                                                                          },
-                                                                                               "description":  "Endpoint-specific query parameters - see https://paygatex402.com/docs"
-                                                                                           }
-                                                                                       ]
-                                                                    }
-                                                        },
-                  "/api/x402/guide-3-the-402-challenge":  {
-                                                              "get":  {
-                                                                          "summary":  "Returning a correct PaymentRequired on Arc, with the details that bite people.",
-                                                                          "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.01 USDC per call. Docs: https://paygatex402.com/docs",
-                                                                          "operationId":  "guide-3-the-402-challenge",
-                                                                          "tags":  [
-                                                                                       "x402",
-                                                                                       "infrastructure",
-                                                                                       "usdc"
-                                                                                   ],
-                                                                          "x-x402":  {
-                                                                                         "network":  "eip155:5042",
-                                                                                         "asset":  "0x3600000000000000000000000000000000000000",
-                                                                                         "scheme":  "exact",
-                                                                                         "amount":  "10000",
-                                                                                         "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                                         "assetTransferMethod":  "eip3009",
-                                                                                         "facilitator":  "circle",
-                                                                                         "category":  "INFRASTRUCTURE"
-                                                                                     },
-                                                                          "responses":  {
-                                                                                            "402":  {
-                                                                                                        "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                                        "headers":  {
-                                                                                                                        "PAYMENT-REQUIRED":  {
-                                                                                                                                                 "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                                 "schema":  {
-                                                                                                                                                                "type":  "string"
-                                                                                                                                                            }
-                                                                                                                                             }
-                                                                                                                    }
-                                                                                                    },
-                                                                                            "200":  {
-                                                                                                        "description":  "Paid response",
-                                                                                                        "content":  {
-                                                                                                                        "application/json":  {
-                                                                                                                                                 "schema":  {
-                                                                                                                                                                "type":  "object"
-                                                                                                                                                            }
-                                                                                                                                             }
-                                                                                                                    }
-                                                                                                    }
-                                                                                        },
-                                                                          "parameters":  [
-                                                                                             {
-                                                                                                 "name":  "input",
-                                                                                                 "in":  "query",
-                                                                                                 "required":  false,
-                                                                                                 "schema":  {
-                                                                                                                "type":  "string"
-                                                                                                            },
-                                                                                                 "description":  "Endpoint-specific query parameters - see https://paygatex402.com/docs"
-                                                                                             }
-                                                                                         ]
-                                                                      }
-                                                          },
-                  "/api/x402/guide-4-verify-and-settle":  {
-                                                              "get":  {
-                                                                          "summary":  "Facilitator verify/settle, failure shapes, and polling pending settlements.",
-                                                                          "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.01 USDC per call. Docs: https://paygatex402.com/docs",
-                                                                          "operationId":  "guide-4-verify-and-settle",
-                                                                          "tags":  [
-                                                                                       "x402",
-                                                                                       "infrastructure",
-                                                                                       "usdc"
-                                                                                   ],
-                                                                          "x-x402":  {
-                                                                                         "network":  "eip155:5042",
-                                                                                         "asset":  "0x3600000000000000000000000000000000000000",
-                                                                                         "scheme":  "exact",
-                                                                                         "amount":  "10000",
-                                                                                         "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                                         "assetTransferMethod":  "eip3009",
-                                                                                         "facilitator":  "circle",
-                                                                                         "category":  "INFRASTRUCTURE"
-                                                                                     },
-                                                                          "responses":  {
-                                                                                            "402":  {
-                                                                                                        "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                                        "headers":  {
-                                                                                                                        "PAYMENT-REQUIRED":  {
-                                                                                                                                                 "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                                 "schema":  {
-                                                                                                                                                                "type":  "string"
-                                                                                                                                                            }
-                                                                                                                                             }
-                                                                                                                    }
-                                                                                                    },
-                                                                                            "200":  {
-                                                                                                        "description":  "Paid response",
-                                                                                                        "content":  {
-                                                                                                                        "application/json":  {
-                                                                                                                                                 "schema":  {
-                                                                                                                                                                "type":  "object"
-                                                                                                                                                            }
-                                                                                                                                             }
-                                                                                                                    }
-                                                                                                    }
-                                                                                        },
-                                                                          "parameters":  [
-                                                                                             {
-                                                                                                 "name":  "input",
-                                                                                                 "in":  "query",
-                                                                                                 "required":  false,
-                                                                                                 "schema":  {
-                                                                                                                "type":  "string"
-                                                                                                            },
-                                                                                                 "description":  "Endpoint-specific query parameters - see https://paygatex402.com/docs"
-                                                                                             }
-                                                                                         ]
-                                                                      }
-                                                          },
-                  "/api/x402/guide-5-serve-and-receipt":  {
-                                                              "get":  {
-                                                                          "summary":  "Serving the paid response and issuing receipt headers buyers can keep.",
-                                                                          "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.01 USDC per call. Docs: https://paygatex402.com/docs",
-                                                                          "operationId":  "guide-5-serve-and-receipt",
-                                                                          "tags":  [
-                                                                                       "x402",
-                                                                                       "infrastructure",
-                                                                                       "usdc"
-                                                                                   ],
-                                                                          "x-x402":  {
-                                                                                         "network":  "eip155:5042",
-                                                                                         "asset":  "0x3600000000000000000000000000000000000000",
-                                                                                         "scheme":  "exact",
-                                                                                         "amount":  "10000",
-                                                                                         "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                                         "assetTransferMethod":  "eip3009",
-                                                                                         "facilitator":  "circle",
-                                                                                         "category":  "INFRASTRUCTURE"
-                                                                                     },
-                                                                          "responses":  {
-                                                                                            "402":  {
-                                                                                                        "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                                        "headers":  {
-                                                                                                                        "PAYMENT-REQUIRED":  {
-                                                                                                                                                 "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                                 "schema":  {
-                                                                                                                                                                "type":  "string"
-                                                                                                                                                            }
-                                                                                                                                             }
-                                                                                                                    }
-                                                                                                    },
-                                                                                            "200":  {
-                                                                                                        "description":  "Paid response",
-                                                                                                        "content":  {
-                                                                                                                        "application/json":  {
-                                                                                                                                                 "schema":  {
-                                                                                                                                                                "type":  "object"
-                                                                                                                                                            }
-                                                                                                                                             }
-                                                                                                                    }
-                                                                                                    }
-                                                                                        },
-                                                                          "parameters":  [
-                                                                                             {
-                                                                                                 "name":  "input",
-                                                                                                 "in":  "query",
-                                                                                                 "required":  false,
-                                                                                                 "schema":  {
-                                                                                                                "type":  "string"
-                                                                                                            },
-                                                                                                 "description":  "Endpoint-specific query parameters - see https://paygatex402.com/docs"
-                                                                                             }
-                                                                                         ]
-                                                                      }
-                                                          },
-                  "/api/x402/guide-6-stamp-every-fill":  {
-                                                             "get":  {
-                                                                         "summary":  "Writing every settle to the PayGateStamp contract so your history is publicly verifiable.",
-                                                                         "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.01 USDC per call. Docs: https://paygatex402.com/docs",
-                                                                         "operationId":  "guide-6-stamp-every-fill",
-                                                                         "tags":  [
-                                                                                      "x402",
-                                                                                      "infrastructure",
-                                                                                      "usdc"
-                                                                                  ],
-                                                                         "x-x402":  {
-                                                                                        "network":  "eip155:5042",
-                                                                                        "asset":  "0x3600000000000000000000000000000000000000",
-                                                                                        "scheme":  "exact",
-                                                                                        "amount":  "10000",
-                                                                                        "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                                        "assetTransferMethod":  "eip3009",
-                                                                                        "facilitator":  "circle",
-                                                                                        "category":  "INFRASTRUCTURE"
-                                                                                    },
-                                                                         "responses":  {
-                                                                                           "402":  {
-                                                                                                       "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                                       "headers":  {
-                                                                                                                       "PAYMENT-REQUIRED":  {
-                                                                                                                                                "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                                "schema":  {
-                                                                                                                                                               "type":  "string"
-                                                                                                                                                           }
-                                                                                                                                            }
-                                                                                                                   }
-                                                                                                   },
-                                                                                           "200":  {
-                                                                                                       "description":  "Paid response",
-                                                                                                       "content":  {
-                                                                                                                       "application/json":  {
-                                                                                                                                                "schema":  {
-                                                                                                                                                               "type":  "object"
-                                                                                                                                                           }
-                                                                                                                                            }
-                                                                                                                   }
-                                                                                                   }
-                                                                                       },
-                                                                         "parameters":  [
-                                                                                            {
-                                                                                                "name":  "input",
-                                                                                                "in":  "query",
-                                                                                                "required":  false,
-                                                                                                "schema":  {
-                                                                                                               "type":  "string"
-                                                                                                           },
-                                                                                                "description":  "Endpoint-specific query parameters - see https://paygatex402.com/docs"
-                                                                                            }
-                                                                                        ]
-                                                                     }
-                                                         },
-                  "/api/x402/guide-7-payment-identifier":  {
-                                                               "get":  {
-                                                                           "summary":  "Idempotent retries for your buyers, 409 on fingerprint mismatch, and binding IDs to stamps.",
-                                                                           "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.01 USDC per call. Docs: https://paygatex402.com/docs",
-                                                                           "operationId":  "guide-7-payment-identifier",
-                                                                           "tags":  [
-                                                                                        "x402",
-                                                                                        "infrastructure",
-                                                                                        "usdc"
-                                                                                    ],
-                                                                           "x-x402":  {
-                                                                                          "network":  "eip155:5042",
-                                                                                          "asset":  "0x3600000000000000000000000000000000000000",
-                                                                                          "scheme":  "exact",
-                                                                                          "amount":  "10000",
-                                                                                          "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                                          "assetTransferMethod":  "eip3009",
-                                                                                          "facilitator":  "circle",
-                                                                                          "category":  "INFRASTRUCTURE"
-                                                                                      },
-                                                                           "responses":  {
-                                                                                             "402":  {
-                                                                                                         "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                                         "headers":  {
-                                                                                                                         "PAYMENT-REQUIRED":  {
-                                                                                                                                                  "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                                  "schema":  {
-                                                                                                                                                                 "type":  "string"
-                                                                                                                                                             }
-                                                                                                                                              }
-                                                                                                                     }
-                                                                                                     },
-                                                                                             "200":  {
-                                                                                                         "description":  "Paid response",
-                                                                                                         "content":  {
-                                                                                                                         "application/json":  {
-                                                                                                                                                  "schema":  {
-                                                                                                                                                                 "type":  "object"
-                                                                                                                                                             }
-                                                                                                                                              }
-                                                                                                                     }
-                                                                                                     }
-                                                                                         },
-                                                                           "parameters":  [
-                                                                                              {
-                                                                                                  "name":  "input",
-                                                                                                  "in":  "query",
-                                                                                                  "required":  false,
-                                                                                                  "schema":  {
-                                                                                                                 "type":  "string"
-                                                                                                             },
-                                                                                                  "description":  "Endpoint-specific query parameters - see https://paygatex402.com/docs"
-                                                                                              }
-                                                                                          ]
-                                                                       }
-                                                           },
-                  "/api/x402/guide-8-discovery-and-next":  {
-                                                               "get":  {
-                                                                           "summary":  "Registries, marketplace listing, batch settlement readiness, and the verification norm.",
-                                                                           "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.01 USDC per call. Docs: https://paygatex402.com/docs",
-                                                                           "operationId":  "guide-8-discovery-and-next",
-                                                                           "tags":  [
-                                                                                        "x402",
-                                                                                        "infrastructure",
-                                                                                        "usdc"
-                                                                                    ],
-                                                                           "x-x402":  {
-                                                                                          "network":  "eip155:5042",
-                                                                                          "asset":  "0x3600000000000000000000000000000000000000",
-                                                                                          "scheme":  "exact",
-                                                                                          "amount":  "10000",
-                                                                                          "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                                          "assetTransferMethod":  "eip3009",
-                                                                                          "facilitator":  "circle",
-                                                                                          "category":  "INFRASTRUCTURE"
-                                                                                      },
-                                                                           "responses":  {
-                                                                                             "402":  {
-                                                                                                         "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                                         "headers":  {
-                                                                                                                         "PAYMENT-REQUIRED":  {
-                                                                                                                                                  "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                                  "schema":  {
-                                                                                                                                                                 "type":  "string"
-                                                                                                                                                             }
-                                                                                                                                              }
-                                                                                                                     }
-                                                                                                     },
-                                                                                             "200":  {
-                                                                                                         "description":  "Paid response",
-                                                                                                         "content":  {
-                                                                                                                         "application/json":  {
-                                                                                                                                                  "schema":  {
-                                                                                                                                                                 "type":  "object"
-                                                                                                                                                             }
-                                                                                                                                              }
-                                                                                                                     }
-                                                                                                     }
-                                                                                         },
-                                                                           "parameters":  [
-                                                                                              {
-                                                                                                  "name":  "input",
-                                                                                                  "in":  "query",
-                                                                                                  "required":  false,
-                                                                                                  "schema":  {
-                                                                                                                 "type":  "string"
-                                                                                                             },
-                                                                                                  "description":  "Endpoint-specific query parameters - see https://paygatex402.com/docs"
-                                                                                              }
-                                                                                          ]
-                                                                       }
-                                                           },
-                  "/api/x402/arc-rpc":  {
-                                            "post":  {
-                                                         "summary":  "General paid JSON-RPC proxy for Arc mainnet. POST {\u0027method\u0027:\u0027\u003cread-only eth_* method\u003e\u0027,\u0027params\u0027:[...]} and get the raw node response, served over PayGate\u0027s dedicated Chainstack node with failover. Read-only allowlist; eth_sendRawTransaction and admin/debug methods are rejected.",
-                                                         "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.001 USDC per call. Docs: https://paygatex402.com/docs",
-                                                         "operationId":  "arc-rpc",
-                                                         "tags":  [
-                                                                      "x402",
-                                                                      "infrastructure",
-                                                                      "usdc"
-                                                                  ],
-                                                         "x-x402":  {
-                                                                        "network":  "eip155:5042",
-                                                                        "asset":  "0x3600000000000000000000000000000000000000",
-                                                                        "scheme":  "exact",
-                                                                        "amount":  "1000",
-                                                                        "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                        "assetTransferMethod":  "eip3009",
-                                                                        "facilitator":  "circle",
-                                                                        "category":  "INFRASTRUCTURE"
-                                                                    },
-                                                         "responses":  {
-                                                                           "402":  {
-                                                                                       "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                       "headers":  {
-                                                                                                       "PAYMENT-REQUIRED":  {
-                                                                                                                                "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                "schema":  {
-                                                                                                                                               "type":  "string"
-                                                                                                                                           }
-                                                                                                                            }
-                                                                                                   }
-                                                                                   },
-                                                                           "200":  {
-                                                                                       "description":  "Paid response",
-                                                                                       "content":  {
-                                                                                                       "application/json":  {
-                                                                                                                                "schema":  {
-                                                                                                                                               "type":  "object"
-                                                                                                                                           }
-                                                                                                                            }
-                                                                                                   }
-                                                                                   }
-                                                                       },
-                                                         "requestBody":  {
-                                                                             "required":  true,
-                                                                             "content":  {
-                                                                                             "application/json":  {
-                                                                                                                      "schema":  {
-                                                                                                                                     "type":  "object"
-                                                                                                                                 }
-                                                                                                                  }
-                                                                                         }
-                                                                         }
-                                                     }
-                                        },
-                  "/api/x402/request-endpoint":  {
-                                                     "post":  {
-                                                                  "summary":  "Pay to file a request for a data product you want on PayGate. Requests are public demand signals; builders can claim them. Include title, description, category and max price as query params.",
-                                                                  "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.01 USDC per call. Docs: https://paygatex402.com/docs",
-                                                                  "operationId":  "request-endpoint",
-                                                                  "tags":  [
-                                                                               "x402",
-                                                                               "web_search_research",
-                                                                               "usdc"
-                                                                           ],
-                                                                  "x-x402":  {
-                                                                                 "network":  "eip155:5042",
-                                                                                 "asset":  "0x3600000000000000000000000000000000000000",
-                                                                                 "scheme":  "exact",
-                                                                                 "amount":  "10000",
-                                                                                 "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                                 "assetTransferMethod":  "eip3009",
-                                                                                 "facilitator":  "circle",
-                                                                                 "category":  "WEB_SEARCH_RESEARCH"
-                                                                             },
-                                                                  "responses":  {
-                                                                                    "402":  {
-                                                                                                "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                                "headers":  {
-                                                                                                                "PAYMENT-REQUIRED":  {
-                                                                                                                                         "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                         "schema":  {
-                                                                                                                                                        "type":  "string"
-                                                                                                                                                    }
-                                                                                                                                     }
-                                                                                                            }
-                                                                                            },
-                                                                                    "200":  {
-                                                                                                "description":  "Paid response",
-                                                                                                "content":  {
-                                                                                                                "application/json":  {
-                                                                                                                                         "schema":  {
-                                                                                                                                                        "type":  "object"
-                                                                                                                                                    }
-                                                                                                                                     }
-                                                                                                            }
-                                                                                            }
-                                                                                },
-                                                                  "requestBody":  {
-                                                                                      "required":  true,
-                                                                                      "content":  {
-                                                                                                      "application/json":  {
-                                                                                                                               "schema":  {
-                                                                                                                                              "type":  "object"
-                                                                                                                                          }
-                                                                                                                           }
-                                                                                                  }
-                                                                                  }
-                                                              }
-                                                 },
-                  "/api/x402/order-book-depth":  {
-                                                     "post":  {
-                                                                  "summary":  "Top 20 bid/ask levels for any spot pair. Snapshot liquidity before you route size.",
-                                                                  "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.002 USDC per call. Docs: https://paygatex402.com/docs",
-                                                                  "operationId":  "order-book-depth",
-                                                                  "tags":  [
-                                                                               "x402",
-                                                                               "financial_analysis",
-                                                                               "usdc"
-                                                                           ],
-                                                                  "x-x402":  {
-                                                                                 "network":  "eip155:5042",
-                                                                                 "asset":  "0x3600000000000000000000000000000000000000",
-                                                                                 "scheme":  "exact",
-                                                                                 "amount":  "2000",
-                                                                                 "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                                 "assetTransferMethod":  "eip3009",
-                                                                                 "facilitator":  "circle",
-                                                                                 "category":  "FINANCIAL_ANALYSIS"
-                                                                             },
-                                                                  "responses":  {
-                                                                                    "402":  {
-                                                                                                "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                                "headers":  {
-                                                                                                                "PAYMENT-REQUIRED":  {
-                                                                                                                                         "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                         "schema":  {
-                                                                                                                                                        "type":  "string"
-                                                                                                                                                    }
-                                                                                                                                     }
-                                                                                                            }
-                                                                                            },
-                                                                                    "200":  {
-                                                                                                "description":  "Paid response",
-                                                                                                "content":  {
-                                                                                                                "application/json":  {
-                                                                                                                                         "schema":  {
-                                                                                                                                                        "type":  "object"
-                                                                                                                                                    }
-                                                                                                                                     }
-                                                                                                            }
-                                                                                            }
-                                                                                },
-                                                                  "requestBody":  {
-                                                                                      "required":  true,
-                                                                                      "content":  {
-                                                                                                      "application/json":  {
-                                                                                                                               "schema":  {
-                                                                                                                                              "type":  "object"
-                                                                                                                                          }
-                                                                                                                           }
-                                                                                                  }
-                                                                                  }
-                                                              }
-                                                 },
-                  "/api/x402/aave-arc-rates":  {
-                                                   "get":  {
-                                                               "summary":  "Live USDC supplied on the Aave V4 Arc Main Spoke, read on-chain. The seed of the PayGate rate map.",
-                                                               "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.002 USDC per call. Docs: https://paygatex402.com/docs",
-                                                               "operationId":  "aave-arc-rates",
-                                                               "tags":  [
-                                                                            "x402",
-                                                                            "financial_analysis",
-                                                                            "usdc"
-                                                                        ],
-                                                               "x-x402":  {
-                                                                              "network":  "eip155:5042",
-                                                                              "asset":  "0x3600000000000000000000000000000000000000",
-                                                                              "scheme":  "exact",
-                                                                              "amount":  "2000",
-                                                                              "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                              "assetTransferMethod":  "eip3009",
-                                                                              "facilitator":  "circle",
-                                                                              "category":  "FINANCIAL_ANALYSIS"
-                                                                          },
-                                                               "responses":  {
-                                                                                 "402":  {
-                                                                                             "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                             "headers":  {
-                                                                                                             "PAYMENT-REQUIRED":  {
-                                                                                                                                      "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                      "schema":  {
-                                                                                                                                                     "type":  "string"
-                                                                                                                                                 }
-                                                                                                                                  }
-                                                                                                         }
-                                                                                         },
-                                                                                 "200":  {
-                                                                                             "description":  "Paid response",
-                                                                                             "content":  {
-                                                                                                             "application/json":  {
-                                                                                                                                      "schema":  {
-                                                                                                                                                     "type":  "object"
-                                                                                                                                                 }
-                                                                                                                                  }
-                                                                                                         }
-                                                                                         }
-                                                                             },
-                                                               "parameters":  [
-                                                                                  {
-                                                                                      "name":  "input",
-                                                                                      "in":  "query",
-                                                                                      "required":  false,
-                                                                                      "schema":  {
-                                                                                                     "type":  "string"
-                                                                                                 },
-                                                                                      "description":  "Endpoint-specific query parameters - see https://paygatex402.com/docs"
-                                                                                  }
-                                                                              ]
-                                                           }
-                                               },
-                  "/api/x402/momentum-signal":  {
-                                                    "get":  {
-                                                                "summary":  "24h and 7d returns plus annualised realised vol from hourly klines, compressed to a bullish/bearish/neutral signal.",
-                                                                "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.005 USDC per call. Docs: https://paygatex402.com/docs",
-                                                                "operationId":  "momentum-signal",
-                                                                "tags":  [
-                                                                             "x402",
-                                                                             "financial_analysis",
-                                                                             "usdc"
-                                                                         ],
-                                                                "x-x402":  {
-                                                                               "network":  "eip155:5042",
-                                                                               "asset":  "0x3600000000000000000000000000000000000000",
-                                                                               "scheme":  "exact",
-                                                                               "amount":  "5000",
-                                                                               "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                               "assetTransferMethod":  "eip3009",
-                                                                               "facilitator":  "circle",
-                                                                               "category":  "FINANCIAL_ANALYSIS"
-                                                                           },
-                                                                "responses":  {
-                                                                                  "402":  {
-                                                                                              "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                              "headers":  {
-                                                                                                              "PAYMENT-REQUIRED":  {
-                                                                                                                                       "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                       "schema":  {
-                                                                                                                                                      "type":  "string"
-                                                                                                                                                  }
-                                                                                                                                   }
-                                                                                                          }
-                                                                                          },
-                                                                                  "200":  {
-                                                                                              "description":  "Paid response",
-                                                                                              "content":  {
-                                                                                                              "application/json":  {
-                                                                                                                                       "schema":  {
-                                                                                                                                                      "type":  "object"
-                                                                                                                                                  }
-                                                                                                                                   }
-                                                                                                          }
-                                                                                          }
-                                                                              },
-                                                                "parameters":  [
-                                                                                   {
-                                                                                       "name":  "input",
-                                                                                       "in":  "query",
-                                                                                       "required":  false,
-                                                                                       "schema":  {
-                                                                                                      "type":  "string"
-                                                                                                  },
-                                                                                       "description":  "Endpoint-specific query parameters - see https://paygatex402.com/docs"
-                                                                                   }
-                                                                               ]
-                                                            }
-                                                },
-                  "/api/x402/arc-chain-status":  {
-                                                     "get":  {
-                                                                 "summary":  "Live Arc mainnet block height and gas price, served over PayGate\u0027s dedicated Chainstack node.",
-                                                                 "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.0005 USDC per call. Docs: https://paygatex402.com/docs",
-                                                                 "operationId":  "arc-chain-status",
-                                                                 "tags":  [
-                                                                              "x402",
-                                                                              "infrastructure",
-                                                                              "usdc"
-                                                                          ],
-                                                                 "x-x402":  {
-                                                                                "network":  "eip155:5042",
-                                                                                "asset":  "0x3600000000000000000000000000000000000000",
-                                                                                "scheme":  "exact",
-                                                                                "amount":  "500",
-                                                                                "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                                "assetTransferMethod":  "eip3009",
-                                                                                "facilitator":  "circle",
-                                                                                "category":  "INFRASTRUCTURE"
-                                                                            },
-                                                                 "responses":  {
-                                                                                   "402":  {
-                                                                                               "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                               "headers":  {
-                                                                                                               "PAYMENT-REQUIRED":  {
-                                                                                                                                        "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                        "schema":  {
-                                                                                                                                                       "type":  "string"
-                                                                                                                                                   }
-                                                                                                                                    }
-                                                                                                           }
-                                                                                           },
-                                                                                   "200":  {
-                                                                                               "description":  "Paid response",
-                                                                                               "content":  {
-                                                                                                               "application/json":  {
-                                                                                                                                        "schema":  {
-                                                                                                                                                       "type":  "object"
-                                                                                                                                                   }
-                                                                                                                                    }
-                                                                                                           }
-                                                                                           }
-                                                                               },
-                                                                 "parameters":  [
-                                                                                    {
-                                                                                        "name":  "input",
-                                                                                        "in":  "query",
-                                                                                        "required":  false,
-                                                                                        "schema":  {
-                                                                                                       "type":  "string"
-                                                                                                   },
-                                                                                        "description":  "Endpoint-specific query parameters - see https://paygatex402.com/docs"
-                                                                                    }
-                                                                                ]
-                                                             }
-                                                 },
-                  "/api/x402/crypto-ticker":  {
-                                                  "get":  {
-                                                              "summary":  "24h price change, high/low, volume and trade count for any spot pair (BTC, ETH, SOL and more).",
-                                                              "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.001 USDC per call. Docs: https://paygatex402.com/docs",
-                                                              "operationId":  "crypto-ticker",
-                                                              "tags":  [
-                                                                           "x402",
-                                                                           "financial_analysis",
-                                                                           "usdc"
-                                                                       ],
-                                                              "x-x402":  {
-                                                                             "network":  "eip155:5042",
-                                                                             "asset":  "0x3600000000000000000000000000000000000000",
-                                                                             "scheme":  "exact",
-                                                                             "amount":  "1000",
-                                                                             "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                             "assetTransferMethod":  "eip3009",
-                                                                             "facilitator":  "circle",
-                                                                             "category":  "FINANCIAL_ANALYSIS"
-                                                                         },
-                                                              "responses":  {
-                                                                                "402":  {
-                                                                                            "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                            "headers":  {
-                                                                                                            "PAYMENT-REQUIRED":  {
-                                                                                                                                     "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                     "schema":  {
-                                                                                                                                                    "type":  "string"
-                                                                                                                                                }
-                                                                                                                                 }
-                                                                                                        }
-                                                                                        },
-                                                                                "200":  {
-                                                                                            "description":  "Paid response",
-                                                                                            "content":  {
-                                                                                                            "application/json":  {
-                                                                                                                                     "schema":  {
-                                                                                                                                                    "type":  "object"
-                                                                                                                                                }
-                                                                                                                                 }
-                                                                                                        }
-                                                                                        }
-                                                                            },
-                                                              "parameters":  [
-                                                                                 {
-                                                                                     "name":  "input",
-                                                                                     "in":  "query",
-                                                                                     "required":  false,
-                                                                                     "schema":  {
-                                                                                                    "type":  "string"
-                                                                                                },
-                                                                                     "description":  "Endpoint-specific query parameters - see https://paygatex402.com/docs"
-                                                                                 }
-                                                                             ]
-                                                          }
-                                              },
-                  "/api/x402/crypto-prices":  {
-                                                  "get":  {
-                                                              "summary":  "Live USD spot prices for major tokens (BTC, ETH, SOL and more) sourced from CoinGecko. Pass ?ids=ethereum,solana\u0026vs_currencies=usd as query params.",
-                                                              "description":  "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.001 USDC per call. Docs: https://paygatex402.com/docs",
-                                                              "operationId":  "crypto-prices",
-                                                              "tags":  [
-                                                                           "x402",
-                                                                           "financial_analysis",
-                                                                           "usdc"
-                                                                       ],
-                                                              "x-x402":  {
-                                                                             "network":  "eip155:5042",
-                                                                             "asset":  "0x3600000000000000000000000000000000000000",
-                                                                             "scheme":  "exact",
-                                                                             "amount":  "1000",
-                                                                             "payTo":  "0x57607f9296385571CbD8Df14D8728B7CB839743D",
-                                                                             "assetTransferMethod":  "eip3009",
-                                                                             "facilitator":  "circle",
-                                                                             "category":  "FINANCIAL_ANALYSIS"
-                                                                         },
-                                                              "responses":  {
-                                                                                "402":  {
-                                                                                            "description":  "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
-                                                                                            "headers":  {
-                                                                                                            "PAYMENT-REQUIRED":  {
-                                                                                                                                     "description":  "Base64-encoded x402 v2 PaymentRequired JSON",
-                                                                                                                                     "schema":  {
-                                                                                                                                                    "type":  "string"
-                                                                                                                                                }
-                                                                                                                                 }
-                                                                                                        }
-                                                                                        },
-                                                                                "200":  {
-                                                                                            "description":  "Paid response",
-                                                                                            "content":  {
-                                                                                                            "application/json":  {
-                                                                                                                                     "schema":  {
-                                                                                                                                                    "type":  "object"
-                                                                                                                                                }
-                                                                                                                                 }
-                                                                                                        }
-                                                                                        }
-                                                                            },
-                                                              "parameters":  [
-                                                                                 {
-                                                                                     "name":  "input",
-                                                                                     "in":  "query",
-                                                                                     "required":  false,
-                                                                                     "schema":  {
-                                                                                                    "type":  "string"
-                                                                                                },
-                                                                                     "description":  "Endpoint-specific query parameters - see https://paygatex402.com/docs"
-                                                                                 }
-                                                                             ]
-                                                          }
-                                              }
-              }
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "PayGate x402 Marketplace API",
+  "version": "2.0.0",
+  "description": "Pay-per-call API marketplace on Arc mainnet. Every endpoint is x402 v2 compliant: unpaid requests return HTTP 402 with a PAYMENT-REQUIRED challenge; callers sign an EIP-3009 USDC authorization and retry with a Payment-Signature header; settlement runs through Circle's Facilitator Service; every settled fill is stamped on-chain for public verification.",
+  "contact": {
+   "name": "PayGate x402",
+   "url": "https://paygatex402.com",
+   "email": "lordginge82@gmail.com"
+  },
+  "x-guidance": "PayGate x402 is a pay-per-call API marketplace on Arc mainnet (eip155:5042). HOW TO PAY: 1) Call any endpoint below without auth — you get HTTP 402 with a PAYMENT-REQUIRED header containing a base64 x402 v2 challenge (accepts[]: scheme \"exact\", asset USDC 0x3600...0000, amount in 6-decimal base units, payTo wallet). 2) Sign an EIP-3009 TransferWithAuthorization (domain: name \"USDC\", version \"2\", chainId 5042) for exactly that amount. 3) Retry the same request with a Payment-Signature header carrying the base64-signed payload. 4) Circle's Facilitator verifies then settles on-chain; the paid response returns your data plus an X-Payment-Receipt header with the Arc tx hash. PRICES: fixed per endpoint, $0.0005-$0.02 USDC per call, shown per operation in x-payment-info (price in USD) and x-x402 (amount in base units). CATEGORIES: market data (crypto-prices, crypto-ticker, order-book-depth, momentum-signal — cheapest, $0.001-$0.005), RWA (centrifuge-rwa-*: pools, pool detail, share-class tokens), web extraction (extractr-arc: POST a URL, get clean text+summary), infrastructure (arc-rpc: read-only JSON-RPC proxy; arc-chain-status), and paid builder guides ($0.01). RECOMMENDED FIRST CALL: GET /api/x402/crypto-prices?ids=ethereum&vs_currencies=usd ($0.001). TRIAL CREDIT: every new wallet can claim $1 of trial credit at paygatex402.com (sign a 0-value EIP-3009 voucher at /api/x402/trial-voucher) — sandbox-priced endpoints are free against it. ERRORS: 403 payment verification failed (check signature, chainId, amount); 502 upstream failure after settlement is auto-refunded in ledger. Rate limits: none on paid calls (payment is the throttle); free routes 60 req/min. Support: lordginge82@gmail.com. Docs: https://paygatex402.com/docs.",
+  "x-guidance-tokenEstimate": "~850 tokens"
+ },
+ "servers": [
+  {
+   "url": "https://paygatex402.com"
+  }
+ ],
+ "x-provider": {
+  "name": "PayGate x402",
+  "website": "https://paygatex402.com",
+  "docsUrl": "https://paygatex402.com/docs",
+  "payoutWallet": "0x57607f9296385571CbD8Df14D8728B7C839743D",
+  "category": "INFRASTRUCTURE",
+  "tags": [
+   "x402",
+   "arc",
+   "usdc",
+   "pay-per-call",
+   "marketplace"
+  ]
+ },
+ "paths": {
+  "/api/x402/extractr-arc": {
+   "post": {
+    "summary": "POST a URL, get back the page's clean readable text, title, word count, and an extractive summary as JSON.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.02 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "extractr-arc",
+    "tags": [
+     "x402",
+     "web_search_research",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "20000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "WEB_SEARCH_RESEARCH"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     }
+    },
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.02",
+     "priceAmount": "0.02",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/centrifuge-rwa-pools": {
+   "post": {
+    "summary": "Every active Centrifuge pool (JAAA, JTRSY and more) with per-token NAV price, supply and TVL in USD, sorted by size. Sourced live from Centrifuge's public protocol indexer across their 9-chain deployment.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.002 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "centrifuge-rwa-pools",
+    "tags": [
+     "x402",
+     "financial_analysis",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "2000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "FINANCIAL_ANALYSIS"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     }
+    },
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.002",
+     "priceAmount": "0.002",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/centrifuge-rwa-pool": {
+   "post": {
+    "summary": "Single Centrifuge pool by numeric ID: share-class tokens with NAV and TVL, plus every vault deployment per chain with asset address and link status. Pass the pool ID as the trailing path segment.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.003 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "centrifuge-rwa-pool",
+    "tags": [
+     "x402",
+     "financial_analysis",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "3000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "FINANCIAL_ANALYSIS"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     }
+    },
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.003",
+     "priceAmount": "0.003",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/centrifuge-rwa-tokens": {
+   "post": {
+    "summary": "All Centrifuge share-class tokens with current NAV price, circulating supply and TVL in USD. Covers deJAAA, deJTRSY, JTRSY and every other active share class.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.001 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "centrifuge-rwa-tokens",
+    "tags": [
+     "x402",
+     "financial_analysis",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "1000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "FINANCIAL_ANALYSIS"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     }
+    },
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.001",
+     "priceAmount": "0.001",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/guide-1-moving-pieces": {
+   "get": {
+    "summary": "What an x402 resource server is, and the Arc + Circle facilitator map you are building on.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.01 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "guide-1-moving-pieces",
+    "tags": [
+     "x402",
+     "infrastructure",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "10000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "INFRASTRUCTURE"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "parameters": [
+     {
+      "name": "input",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      },
+      "description": "Endpoint-specific query parameters - see https://paygatex402.com/docs"
+     }
+    ],
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.01",
+     "priceAmount": "0.01",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/guide-2-keys-and-wallet": {
+   "get": {
+    "summary": "Payout addresses, key hygiene, and the setup that keeps revenue safe.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.01 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "guide-2-keys-and-wallet",
+    "tags": [
+     "x402",
+     "infrastructure",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "10000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "INFRASTRUCTURE"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "parameters": [
+     {
+      "name": "input",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      },
+      "description": "Endpoint-specific query parameters - see https://paygatex402.com/docs"
+     }
+    ],
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.01",
+     "priceAmount": "0.01",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/guide-3-the-402-challenge": {
+   "get": {
+    "summary": "Returning a correct PaymentRequired on Arc, with the details that bite people.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.01 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "guide-3-the-402-challenge",
+    "tags": [
+     "x402",
+     "infrastructure",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "10000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "INFRASTRUCTURE"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "parameters": [
+     {
+      "name": "input",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      },
+      "description": "Endpoint-specific query parameters - see https://paygatex402.com/docs"
+     }
+    ],
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.01",
+     "priceAmount": "0.01",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/guide-4-verify-and-settle": {
+   "get": {
+    "summary": "Facilitator verify/settle, failure shapes, and polling pending settlements.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.01 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "guide-4-verify-and-settle",
+    "tags": [
+     "x402",
+     "infrastructure",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "10000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "INFRASTRUCTURE"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "parameters": [
+     {
+      "name": "input",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      },
+      "description": "Endpoint-specific query parameters - see https://paygatex402.com/docs"
+     }
+    ],
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.01",
+     "priceAmount": "0.01",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/guide-5-serve-and-receipt": {
+   "get": {
+    "summary": "Serving the paid response and issuing receipt headers buyers can keep.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.01 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "guide-5-serve-and-receipt",
+    "tags": [
+     "x402",
+     "infrastructure",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "10000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "INFRASTRUCTURE"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "parameters": [
+     {
+      "name": "input",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      },
+      "description": "Endpoint-specific query parameters - see https://paygatex402.com/docs"
+     }
+    ],
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.01",
+     "priceAmount": "0.01",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/guide-6-stamp-every-fill": {
+   "get": {
+    "summary": "Writing every settle to the PayGateStamp contract so your history is publicly verifiable.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.01 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "guide-6-stamp-every-fill",
+    "tags": [
+     "x402",
+     "infrastructure",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "10000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "INFRASTRUCTURE"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "parameters": [
+     {
+      "name": "input",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      },
+      "description": "Endpoint-specific query parameters - see https://paygatex402.com/docs"
+     }
+    ],
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.01",
+     "priceAmount": "0.01",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/guide-7-payment-identifier": {
+   "get": {
+    "summary": "Idempotent retries for your buyers, 409 on fingerprint mismatch, and binding IDs to stamps.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.01 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "guide-7-payment-identifier",
+    "tags": [
+     "x402",
+     "infrastructure",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "10000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "INFRASTRUCTURE"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "parameters": [
+     {
+      "name": "input",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      },
+      "description": "Endpoint-specific query parameters - see https://paygatex402.com/docs"
+     }
+    ],
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.01",
+     "priceAmount": "0.01",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/guide-8-discovery-and-next": {
+   "get": {
+    "summary": "Registries, marketplace listing, batch settlement readiness, and the verification norm.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.01 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "guide-8-discovery-and-next",
+    "tags": [
+     "x402",
+     "infrastructure",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "10000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "INFRASTRUCTURE"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "parameters": [
+     {
+      "name": "input",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      },
+      "description": "Endpoint-specific query parameters - see https://paygatex402.com/docs"
+     }
+    ],
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.01",
+     "priceAmount": "0.01",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/arc-rpc": {
+   "post": {
+    "summary": "General paid JSON-RPC proxy for Arc mainnet. POST {'method':'<read-only eth_* method>','params':[...]} and get the raw node response, served over PayGate's dedicated Chainstack node with failover. Read-only allowlist; eth_sendRawTransaction and admin/debug methods are rejected.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.001 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "arc-rpc",
+    "tags": [
+     "x402",
+     "infrastructure",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "1000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "INFRASTRUCTURE"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     }
+    },
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.001",
+     "priceAmount": "0.001",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/request-endpoint": {
+   "post": {
+    "summary": "Pay to file a request for a data product you want on PayGate. Requests are public demand signals; builders can claim them. Include title, description, category and max price as query params.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.01 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "request-endpoint",
+    "tags": [
+     "x402",
+     "web_search_research",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "10000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "WEB_SEARCH_RESEARCH"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     }
+    },
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.01",
+     "priceAmount": "0.01",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/order-book-depth": {
+   "post": {
+    "summary": "Top 20 bid/ask levels for any spot pair. Snapshot liquidity before you route size.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.002 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "order-book-depth",
+    "tags": [
+     "x402",
+     "financial_analysis",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "2000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "FINANCIAL_ANALYSIS"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     }
+    },
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.002",
+     "priceAmount": "0.002",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/aave-arc-rates": {
+   "get": {
+    "summary": "Live USDC supplied on the Aave V4 Arc Main Spoke, read on-chain. The seed of the PayGate rate map.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.002 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "aave-arc-rates",
+    "tags": [
+     "x402",
+     "financial_analysis",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "2000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "FINANCIAL_ANALYSIS"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "parameters": [
+     {
+      "name": "input",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      },
+      "description": "Endpoint-specific query parameters - see https://paygatex402.com/docs"
+     }
+    ],
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.002",
+     "priceAmount": "0.002",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/momentum-signal": {
+   "get": {
+    "summary": "24h and 7d returns plus annualised realised vol from hourly klines, compressed to a bullish/bearish/neutral signal.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.005 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "momentum-signal",
+    "tags": [
+     "x402",
+     "financial_analysis",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "5000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "FINANCIAL_ANALYSIS"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "parameters": [
+     {
+      "name": "input",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      },
+      "description": "Endpoint-specific query parameters - see https://paygatex402.com/docs"
+     }
+    ],
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.005",
+     "priceAmount": "0.005",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/arc-chain-status": {
+   "get": {
+    "summary": "Live Arc mainnet block height and gas price, served over PayGate's dedicated Chainstack node.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.0005 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "arc-chain-status",
+    "tags": [
+     "x402",
+     "infrastructure",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "500",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "INFRASTRUCTURE"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "parameters": [
+     {
+      "name": "input",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      },
+      "description": "Endpoint-specific query parameters - see https://paygatex402.com/docs"
+     }
+    ],
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.0005",
+     "priceAmount": "0.0005",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/crypto-ticker": {
+   "get": {
+    "summary": "24h price change, high/low, volume and trade count for any spot pair (BTC, ETH, SOL and more).",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.001 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "crypto-ticker",
+    "tags": [
+     "x402",
+     "financial_analysis",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "1000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "FINANCIAL_ANALYSIS"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "parameters": [
+     {
+      "name": "input",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      },
+      "description": "Endpoint-specific query parameters - see https://paygatex402.com/docs"
+     }
+    ],
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.001",
+     "priceAmount": "0.001",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  },
+  "/api/x402/crypto-prices": {
+   "get": {
+    "summary": "Live USD spot prices for major tokens (BTC, ETH, SOL and more) sourced from CoinGecko. Pass ?ids=ethereum,solana&vs_currencies=usd as query params.",
+    "description": "x402 pay-per-call endpoint. Unpaid calls return HTTP 402 with a PAYMENT-REQUIRED challenge (x402 v2, exact scheme, EIP-3009 USDC on eip155:5042). Price: $0.001 USDC per call. Docs: https://paygatex402.com/docs",
+    "operationId": "crypto-prices",
+    "tags": [
+     "x402",
+     "financial_analysis",
+     "usdc"
+    ],
+    "x-x402": {
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000",
+     "scheme": "exact",
+     "amount": "1000",
+     "payTo": "0x57607f9296385571CbD8Df14D8728B7CB839743D",
+     "assetTransferMethod": "eip3009",
+     "facilitator": "circle",
+     "category": "FINANCIAL_ANALYSIS"
+    },
+    "responses": {
+     "200": {
+      "description": "Paid response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     },
+     "402": {
+      "description": "Payment required - x402 v2 challenge in PAYMENT-REQUIRED header (base64 JSON)",
+      "headers": {
+       "PAYMENT-REQUIRED": {
+        "description": "Base64-encoded x402 v2 PaymentRequired JSON",
+        "schema": {
+         "type": "string"
+        }
+       }
+      }
+     }
+    },
+    "parameters": [
+     {
+      "name": "input",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string"
+      },
+      "description": "Endpoint-specific query parameters - see https://paygatex402.com/docs"
+     }
+    ],
+    "x-payment-info": {
+     "protocols": [
+      "x402"
+     ],
+     "pricingMode": "fixed",
+     "price": "0.001",
+     "priceAmount": "0.001",
+     "priceCurrency": "USD",
+     "currency": "USD",
+     "network": "eip155:5042",
+     "asset": "0x3600000000000000000000000000000000000000"
+    }
+   }
+  }
+ },
+ "$schema": "https://spec.openapis.org/oas/3.1/dialect/latest"
 }
