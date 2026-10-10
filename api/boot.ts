@@ -43,7 +43,7 @@ app.use("/api/trpc/*", async (c, next) => {
 // x402 discovery manifest (x402scan registration + IETF draft-hawkins
 // well-known URI). Origin is pinned in config, never derived from the
 // request Host header.
-app.get("/.well-known/x402", (c) => {
+app.get("/.well-known/x402", async (c) => {
   const origin = "https://paygatex402.com";
   return c.json(
     {
@@ -53,7 +53,11 @@ app.get("/.well-known/x402", (c) => {
       name: "PayGate x402",
       description:
         "Pay-per-call API marketplace settling in USDC on Arc mainnet (eip155:5042) via EIP-3009 and the Circle facilitator.",
-      resources: GUIDE_PARTS.map((p) => `${origin}/api/x402/${p.slug}`),
+      resources: await buildWellKnownResources(origin).catch(
+        // DB unreachable: fall back to the guide routes so the manifest
+        // never goes empty.
+        () => GUIDE_PARTS.map((p) => `${origin}/api/x402/${p.slug}`),
+      ),
       docs: `${origin}/docs`,
       updated: "2026-09-24T00:00:00Z",
     },
@@ -62,18 +66,32 @@ app.get("/.well-known/x402", (c) => {
   );
 });
 
-// OpenAPI discovery document. Read by x402scan's register-origin probe
-// (flat x-payment-info per route) and by the Circle Agent Marketplace
-// intake (full OpenAPI). The full spec is pregenerated in openapi-spec.json
-// from the live 402 challenges of all 20 endpoints (verbs, amounts, payTo,
-// categories); the flat x-payment-info shape is derived from it here so
-// both consumers get consistent, complete data from one source.
-import fullSpec from "./openapi-spec.json";
+// OpenAPI discovery document — built LIVE from the endpoints table (same
+// source the 402 challenges price from), so a new endpoint or price edit is
+// reflected here within the 60s cache window and can never drift from what
+// buyers are actually charged. The static openapi-spec.json is only a
+// DB-outage fallback; x-payment-info uses the nested price shape.
+import { buildOpenApiSpec, buildWellKnownResources } from "./x402/openapi";
+import fallbackSpec from "./openapi-spec.json";
 import a2aCard from "./wellknown-a2a.json";
 
-// Agent discovery surfaces (probed by Circle tooling, a2a clients, and
-// x402 registries). openapi.json stays the canonical full spec; the
-// .well-known variants are discovery aliases pointing agents at it.
+app.get("/openapi.json", async (c) => {
+  let spec: Record<string, unknown>;
+  let source: string;
+  try {
+    spec = await buildOpenApiSpec();
+    source = "live";
+  } catch (e) {
+    console.error("dynamic openapi build failed, using fallback:", e);
+    spec = fallbackSpec as Record<string, unknown>;
+    source = "fallback";
+  }
+  return c.json(
+    { ...spec, "x-spec-source": source },
+    200,
+    { "Cache-Control": "public, max-age=60", "Access-Control-Allow-Origin": "*" },
+  );
+});
 app.get("/.well-known/openapi.json", (c) => c.redirect("https://paygatex402.com/openapi.json", 302));
 app.get("/.well-known/ai-plugin.json", (c) =>
   c.json({
