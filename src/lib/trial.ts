@@ -46,9 +46,23 @@ export function extensionSigners(account: `0x${string}`): Signers {
   };
 }
 
+function isMobileBrowser(): boolean {
+  return /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent);
+}
+
 export async function connectArc(): Promise<`0x${string}`> {
   const eth = getProvider();
-  if (!eth) throw new Error("No wallet found. Install MetaMask or another EIP-1193 wallet.");
+  if (!eth) {
+    // Mobile browsers have no extension wallet. Deep-link into MetaMask's
+    // in-app browser, which injects window.ethereum, so the same flow runs
+    // there. Desktop users get the install message instead.
+    if (isMobileBrowser()) {
+      const dappUrl = `${window.location.host}${window.location.pathname}`;
+      window.location.href = `https://link.metamask.io/dapp/${dappUrl}`;
+      throw new Error("Opening MetaMask. If nothing happens, install MetaMask and try again.");
+    }
+    throw new Error("No wallet found. Install MetaMask or another EIP-1193 wallet.");
+  }
   const accounts = (await eth.request({ method: "eth_requestAccounts" })) as string[];
   try {
     await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: ARC_CHAIN_HEX }] });

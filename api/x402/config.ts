@@ -55,19 +55,28 @@ async function rpcWithFailover<T>(
 ): Promise<T> {
   let lastErr: unknown;
   for (const url of urls) {
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-        signal: AbortSignal.timeout(8000),
-      });
-      if (!res.ok) throw new Error(`RPC HTTP ${res.status}`);
-      const data = (await res.json()) as { result?: T; error?: { message?: string } };
-      if (data.error) throw new Error(data.error.message ?? "RPC error");
-      return data.result as T;
-    } catch (e) {
-      lastErr = e;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+          signal: AbortSignal.timeout(8000),
+        });
+        // Public RPCs rate-limit per egress IP, and Worker egress IPs are
+        // shared with other tenants, so 429s arrive even under modest load.
+        // Back off progressively (0.8s..6.4s) before failing over.
+        if (res.status === 429 && attempt < 4) {
+          await new Promise((r) => setTimeout(r, 800 * 2 ** attempt));
+          continue;
+        }
+        if (!res.ok) throw new Error(`RPC HTTP ${res.status}`);
+        const data = (await res.json()) as { result?: T; error?: { message?: string } };
+        if (data.error) throw new Error(data.error.message ?? "RPC error");
+        return data.result as T;
+      } catch (e) {
+        lastErr = e;
+      }
     }
   }
   throw lastErr instanceof Error ? lastErr : new Error("All RPC endpoints failed");
