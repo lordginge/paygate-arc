@@ -562,6 +562,11 @@ interface RpcLog {
   data: string;
 }
 
+// Last good feed result per isolate. The public RPC 429s under shared
+// Worker egress-IP load; serving a recent stale snapshot keeps the
+// terminal alive instead of hard-502ing the homepage.
+let feedCache: { ts: number; payload: { latest: number; rows: unknown[] } } | null = null;
+
 dataApi.get("/arc/usdc-feed", async (c) => {
   try {
     const after = Number(c.req.query("after") ?? "0");
@@ -597,9 +602,11 @@ dataApi.get("/arc/usdc-feed", async (c) => {
       const from = Math.max(after + 1, latest - 1999);
       if (from <= latest) logs = await fetchSafe(from, latest);
     } else {
-      // First load: walk backwards until we have rows to show.
+      // First load: walk backwards until we have rows to show. Capped at
+      // 6 chunks (12k blocks) so one cold page load can't burst the public
+      // RPC into 429s; an empty early range just means an empty feed.
       let hi = latest;
-      for (let i = 0; i < 40 && logs.length < 25 && hi > 0; i++) {
+      for (let i = 0; i < 6 && logs.length < 25 && hi > 0; i++) {
         const lo = Math.max(0, hi - 1999);
         const chunk = await fetchSafe(lo, hi);
         logs = chunk.concat(logs);
@@ -622,8 +629,13 @@ dataApi.get("/arc/usdc-feed", async (c) => {
       })
       .sort((a, b) => a.block - b.block)
       .slice(-25);
-    return c.json({ latest, rows });
+    const payload = { latest, rows };
+    feedCache = { ts: Date.now(), payload };
+    return c.json(payload);
   } catch (e) {
+    if (feedCache && Date.now() - feedCache.ts < 120_000) {
+      return c.json({ ...feedCache.payload, stale: true });
+    }
     return c.json({ error: "rpc unavailable", detail: String(e) }, 502);
   }
 });
