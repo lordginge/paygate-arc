@@ -52,10 +52,13 @@ async function rpcWithFailover<T>(
   urls: string[],
   method: string,
   params: unknown[],
+  opts?: { attempts?: number; backoffMs?: number },
 ): Promise<T> {
+  const attempts = opts?.attempts ?? 5;
+  const backoffMs = opts?.backoffMs ?? 800;
   let lastErr: unknown;
   for (const url of urls) {
-    for (let attempt = 0; attempt < 5; attempt++) {
+    for (let attempt = 0; attempt < attempts; attempt++) {
       try {
         const res = await fetch(url, {
           method: "POST",
@@ -65,9 +68,12 @@ async function rpcWithFailover<T>(
         });
         // Public RPCs rate-limit per egress IP, and Worker egress IPs are
         // shared with other tenants, so 429s arrive even under modest load.
-        // Back off progressively (0.8s..6.4s) before failing over.
-        if (res.status === 429 && attempt < 4) {
-          await new Promise((r) => setTimeout(r, 800 * 2 ** attempt));
+        // Back off progressively before failing over. Cron callers pass a
+        // tiny backoff: a tick that cannot get through must die fast, not
+        // pile up sleeping retry loops that starve the isolate's
+        // subrequest pool (that wedged every route, assets included).
+        if (res.status === 429 && attempt < attempts - 1) {
+          await new Promise((r) => setTimeout(r, backoffMs * 2 ** attempt));
           continue;
         }
         if (!res.ok) throw new Error(`RPC HTTP ${res.status}`);
@@ -84,6 +90,17 @@ async function rpcWithFailover<T>(
 
 export function arcRpc<T = unknown>(method: string, params: unknown[]): Promise<T> {
   return rpcWithFailover<T>(ARC_RPC_URLS, method, params);
+}
+
+// Fail-fast variant for the per-minute indexer cron: at most two quick
+// tries per URL, then the tick gives up and the next tick retries. Slow
+// backoffs belong to user-facing requests, where one caller waiting a few
+// seconds is fine and there is no next run to pick the work up.
+export function arcRpcFast<T = unknown>(method: string, params: unknown[]): Promise<T> {
+  return rpcWithFailover<T>(ARC_RPC_URLS, method, params, {
+    attempts: 2,
+    backoffMs: 150,
+  });
 }
 
 export function baseRpc<T = unknown>(method: string, params: unknown[]): Promise<T> {

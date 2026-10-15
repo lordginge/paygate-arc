@@ -1,5 +1,5 @@
 import { keccak256, toBytes } from "viem";
-import { arcRpc, USDC_ADDRESS, USDC_DECIMALS } from "../x402/config";
+import { arcRpc, arcRpcFast, USDC_ADDRESS, USDC_DECIMALS } from "../x402/config";
 import { sbRpc, sbSelect, sbUpsert } from "./supabase";
 
 // On-chain EIP-3009 indexer for Arc. Scans AuthorizationUsed events on the
@@ -59,7 +59,7 @@ async function getLogs(
   topic: string,
 ): Promise<RpcLog[]> {
   try {
-    const logs = await arcRpc<RpcLog[] | null>("eth_getLogs", [
+    const logs = await arcRpcFast<RpcLog[] | null>("eth_getLogs", [
       {
         address: USDC_ADDRESS,
         topics: [topic],
@@ -148,7 +148,7 @@ export async function advanceIndexer(): Promise<{
   caughtUp: boolean;
 }> {
   const started = Date.now();
-  const headHex = await arcRpc<string>("eth_blockNumber", []);
+  const headHex = await arcRpcFast<string>("eth_blockNumber", []);
   const head = Number(BigInt(headHex));
   let last = await readCursor();
   const runFrom = last + 1;
@@ -205,7 +205,7 @@ export async function advanceIndexer(): Promise<{
         const batch = budgetHashes.slice(b, b + RECEIPT_BATCH);
         const results = await Promise.all(
           batch.map((h) =>
-            arcRpc<{ logs: RpcLog[] } | null>("eth_getTransactionReceipt", [h]),
+            arcRpcFast<{ logs: RpcLog[] } | null>("eth_getTransactionReceipt", [h]),
           ),
         );
         receipts.push(...results);

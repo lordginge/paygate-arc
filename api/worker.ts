@@ -23,6 +23,9 @@ const CSP = [
 // search engines consolidate signals on one origin.
 const CANONICAL_HOST = "paygatex402.com";
 
+// Per-isolate flag, see the guard in scheduled().
+let indexerTickInFlight = false;
+
 // Server-side route allowlist. Anything else extensionless is a genuine 404
 // (assets with a file extension fall through to the assets binding, which
 // answers 404 on its own). Keep in sync with src/App.tsx routes.
@@ -114,6 +117,15 @@ export default {
     _env: Env,
     ctx: { waitUntil: (p: Promise<unknown>) => void },
   ): Promise<void> {
+    // Module state is per-isolate. If the previous tick is still alive when
+    // the next one fires (RPC trouble used to keep ticks sleeping in long
+    // backoff loops), overlapping ticks piled up and starved the isolate's
+    // subrequest pool, which stalled even static assets. Skip instead.
+    if (indexerTickInFlight) {
+      console.log("indexer tick skipped: previous tick still running");
+      return;
+    }
+    indexerTickInFlight = true;
     ctx.waitUntil(
       advanceIndexer()
         .then((r) =>
@@ -127,6 +139,9 @@ export default {
         .catch((e) => {
           console.error("indexer advance failed:", e);
           throw e;
+        })
+        .finally(() => {
+          indexerTickInFlight = false;
         }),
     );
   },
