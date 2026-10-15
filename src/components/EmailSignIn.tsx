@@ -27,13 +27,31 @@ export function EmailSignIn(props: {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [cfg, setCfg] = useState<{ ready: boolean; appId: string | null } | null>(null);
+  const [cfgFailed, setCfgFailed] = useState(false);
+
+  // The email form must never depend on this fetch: a slow cold start on the
+  // API used to leave the whole sign-in card blank, which read as a frozen
+  // page on mobile. Load config in the background, retry a couple of times,
+  // and surface an explicit retry if it still fails.
+  function loadCfg(attempt: number) {
+    setCfgFailed(false);
+    fetchCircleConfig().then((res) => {
+      if (res) {
+        setCfg(res);
+      } else if (attempt < 3) {
+        setTimeout(() => loadCfg(attempt + 1), 1500 * attempt);
+      } else {
+        setCfgFailed(true);
+      }
+    });
+  }
 
   useEffect(() => {
-    fetchCircleConfig().then(setCfg);
+    loadCfg(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!cfg) return null;
-  if (!cfg.ready || !cfg.appId) {
+  if (cfg && (!cfg.ready || !cfg.appId)) {
     return (
       <div className="m3e-frame-soft mt-4 p-4">
         <p className="mono-label text-white/35">
@@ -42,9 +60,7 @@ export function EmailSignIn(props: {
       </div>
     );
   }
-  const appId = cfg.appId;
-
-  function makeSigners(session: CircleSession): Signers {
+  function makeSigners(appId: string, session: CircleSession): Signers {
     return {
       signTypedData: (td) => circleSignTypedData(appId, session, td),
       personalSign: (msg) => circlePersonalSign(appId, session, msg),
@@ -60,6 +76,18 @@ export function EmailSignIn(props: {
     }
     setBusy(true);
     try {
+      // The user may hit Continue before the background config fetch lands.
+      // Give it one more chance here rather than dead-ending the tap.
+      let ready = cfg && cfg.ready && cfg.appId ? cfg : null;
+      if (!ready) {
+        const res = await fetchCircleConfig();
+        if (res) setCfg(res);
+        ready = res && res.ready && res.appId ? res : null;
+      }
+      if (!ready || !ready.appId) {
+        throw new Error("Sign-in service is still starting up. Try again in a few seconds.");
+      }
+      const appId = ready.appId;
       await requestEmailOtp(appId, trimmed);
       setStage("code");
       // Circle's hosted window takes over: user types the code there.
@@ -80,7 +108,7 @@ export function EmailSignIn(props: {
         address: wallet.address.toLowerCase() as `0x${string}`,
       };
       saveCircleSession(session);
-      props.onSession(session, makeSigners(session));
+      props.onSession(session, makeSigners(appId, session));
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Sign-in failed. Try again.");
       setStage("error");
@@ -91,6 +119,19 @@ export function EmailSignIn(props: {
 
   return (
     <div className="mt-6">
+      {cfgFailed && (
+        <div className="m3e-frame-soft mb-3 p-3">
+          <p className="mono-label text-white/40">
+            SIGN-IN SERVICE SLOW TO RESPOND.{" "}
+            <button
+              onClick={() => loadCfg(1)}
+              className="text-[#3B6DFF] underline underline-offset-2"
+            >
+              RETRY
+            </button>
+          </p>
+        </div>
+      )}
       {(stage === "email" || stage === "error") && (
         <div>
           <label className="block">

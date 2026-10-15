@@ -70,10 +70,23 @@ function circleError(e: unknown): string {
 export const circleUsersApi = new Hono();
 
 // Public client config. The App ID is designed to be exposed to browsers.
+// Module state is per-isolate, so each cold isolate's first read can be slow;
+// a shared cached payload plus edge cache keeps repeat loads instant and
+// prevents the sign-in card from ever hanging on a warm reload.
+let configCache: { body: { ready: boolean; appId: string | null }; ts: number } | null = null;
+
 circleUsersApi.get("/config", (c) => {
-  return c.json({
-    ready: userWalletsReady(),
-    appId: userWalletsReady() ? CIRCLE_APP_ID : null,
+  if (!configCache || Date.now() - configCache.ts > 60_000) {
+    configCache = {
+      body: {
+        ready: userWalletsReady(),
+        appId: userWalletsReady() ? CIRCLE_APP_ID : null,
+      },
+      ts: Date.now(),
+    };
+  }
+  return c.json(configCache.body, 200, {
+    "cache-control": "public, max-age=30, stale-while-revalidate=60",
   });
 });
 

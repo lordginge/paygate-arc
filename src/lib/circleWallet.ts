@@ -69,7 +69,11 @@ export async function fetchCircleConfig(): Promise<{ ready: boolean; appId: stri
   // a hard {ready:false} here would flash a "coming soon" notice on
   // transient network errors and diverge from the prerendered HTML.
   try {
-    const res = await fetch("/api/circle/config");
+    // Hard cap: without this a stalled cold isolate can hang the fetch
+    // forever and callers that retry would never get their chance.
+    const res = await fetch("/api/circle/config", {
+      signal: AbortSignal.timeout(8_000),
+    });
     if (!res.ok) return null;
     return (await res.json()) as { ready: boolean; appId: string | null };
   } catch {
